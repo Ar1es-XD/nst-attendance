@@ -151,7 +151,7 @@ def main():
     overall_pct, overall_bunk, overall_req = calculate_stats(overall_att, overall_tot, 75.0)
 
     print("\n" + "="*86)
-    print(f"📊 ATTENDANCE REPORT — {sem_name.upper()}")
+    print(f"ATTENDANCE REPORT — {sem_name.upper()}")
     print("="*86)
     print(f"Overall Semester Attendance : {overall_att}/{overall_tot} classes ({overall_pct:.1f}%)")
     if overall_pct >= 75.0:
