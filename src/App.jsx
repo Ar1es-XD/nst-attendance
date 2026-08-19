@@ -1057,9 +1057,16 @@ export default function App() {
             <div className="batch-sim-info">
               <Sparkles size={20} color="var(--accent-mint)" />
               <div>
-                <span className="eyebrow mint" style={{ display: 'block', marginBottom: '0.1rem' }}>WHAT-IF ENGINE // BATCH PROJECTIONS</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.1rem' }}>
+                  <span className="eyebrow mint">WHAT-IF ENGINE // PROJECTIONS</span>
+                  {healthStats.totalSimulations > 0 && (
+                    <span className="status-pill live" style={{ fontSize: '0.64rem', padding: '0.1rem 0.45rem' }}>
+                      {healthStats.totalSimulations} active override{healthStats.totalSimulations > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: '0.86rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                  Simulate universal timetable schedule scenarios across all courses:
+                  Simulate universal timetable schedule scenarios or test attendance impact:
                 </span>
               </div>
             </div>
@@ -1078,6 +1085,16 @@ export default function App() {
               </button>
               <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
                 <span>Miss Full Week</span>
+              </button>
+              <button 
+                className={`btn-algora ${healthStats.totalSimulations > 0 ? 'btn-algora-danger' : 'btn-algora-secondary'}`}
+                onClick={resetAllAdjustments}
+                disabled={healthStats.totalSimulations === 0}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                title="Reset all simulated adjustments back to portal values"
+              >
+                <RotateCcw size={13} />
+                <span>Reset All {healthStats.totalSimulations > 0 ? `(${healthStats.totalSimulations})` : ''}</span>
               </button>
             </div>
           </div>
@@ -1231,16 +1248,19 @@ export default function App() {
                       {/* Interactive Tactile Stepper Simulator */}
                       <div className="simulator-box">
                         <div className="simulator-box-header">
-                          <span className="eyebrow" style={{ fontSize: '0.68rem' }}>
+                          <span className="eyebrow" style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <Sparkles size={11} color="var(--accent-mint)" />
                             WHAT-IF STEPPER
                           </span>
                           {subject.hasAdjustments && (
                             <button 
                               onClick={() => resetAdjustment(subject.hash)}
-                              style={{ background: 'none', border: 'none', color: 'var(--accent-crimson)', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                              className="btn-algora btn-algora-danger"
+                              style={{ padding: '0.15rem 0.45rem', fontSize: '0.7rem', height: 'auto', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              title="Reset simulation for this subject"
                             >
-                              Reset
+                              <RotateCcw size={10} />
+                              <span>Reset</span>
                             </button>
                           )}
                         </div>
