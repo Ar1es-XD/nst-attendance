@@ -1,34 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  Key, 
-  User, 
-  BookOpen, 
-  HelpCircle, 
+  Zap, 
+  Copy, 
+  Check, 
+  CheckCircle2, 
+  AlertTriangle, 
+  RotateCcw, 
+  FolderPlus, 
+  Trash2, 
+  ExternalLink, 
+  Info, 
+  LogOut, 
+  ShieldCheck, 
   Moon, 
   Sun, 
   RefreshCw, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  RotateCcw, 
-  Sliders, 
-  FolderPlus, 
-  Trash2,
-  ExternalLink,
-  Info,
-  LogOut,
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  Copy,
-  Check,
-  Bookmark,
-  Terminal,
-  Search,
-  GraduationCap
+  GraduationCap, 
+  Search, 
+  Sparkles, 
+  Layers, 
+  Activity, 
+  Calculator, 
+  Plus, 
+  Minus, 
+  Code2, 
+  Play,
+  Flame
 } from 'lucide-react';
 
 const API_BASE = "";
+
+// Sample realistic demo data matching Newton School CS curriculum
+const DEMO_SEMESTERS = [
+  {
+    hash: 'demo-sem-3',
+    title: 'Semester 3 (Computer Science)',
+    shortName: 'Sem 3',
+    isActive: true,
+    learningUnits: [
+      { id: 1, hash: 'sub-dsa-301', title: 'Data Structures & Algorithms', short_display_name: 'DSA' },
+      { id: 2, hash: 'sub-os-302', title: 'Operating Systems & Linux Internals', short_display_name: 'OS' },
+      { id: 3, hash: 'sub-fs-303', title: 'Full Stack Web Development', short_display_name: 'WebDev' },
+      { id: 4, hash: 'sub-dbms-304', title: 'Database Management Systems', short_display_name: 'DBMS' },
+      { id: 5, hash: 'sub-cn-305', title: 'Computer Networks & Security', short_display_name: 'CN' },
+      { id: 6, hash: 'sub-ml-306', title: 'Machine Learning Foundations', short_display_name: 'ML' }
+    ]
+  },
+  {
+    hash: 'demo-sem-2',
+    title: 'Semester 2 (Foundation Year)',
+    shortName: 'Sem 2',
+    isActive: false,
+    learningUnits: [
+      { id: 101, hash: 'sub-oops-201', title: 'Object Oriented Programming in Java', short_display_name: 'Java' },
+      { id: 102, hash: 'sub-discrete-202', title: 'Discrete Mathematics', short_display_name: 'Math' }
+    ]
+  }
+];
+
+const DEMO_PERFORMANCES = {
+  'demo-sem-3': { total_lectures: 202, total_lectures_attended: 159 },
+  'sub-dsa-301': { total_lectures: 38, total_lectures_attended: 34 },
+  'sub-os-302': { total_lectures: 34, total_lectures_attended: 26 },
+  'sub-fs-303': { total_lectures: 44, total_lectures_attended: 40 },
+  'sub-dbms-304': { total_lectures: 28, total_lectures_attended: 18 },
+  'sub-cn-305': { total_lectures: 28, total_lectures_attended: 22 },
+  'sub-ml-306': { total_lectures: 30, total_lectures_attended: 19 },
+  'demo-sem-2': { total_lectures: 80, total_lectures_attended: 68 },
+  'sub-oops-201': { total_lectures: 40, total_lectures_attended: 36 },
+  'sub-discrete-202': { total_lectures: 40, total_lectures_attended: 32 }
+};
+
+const DEMO_PROFILE = {
+  first_name: 'Alex',
+  last_name: 'Rivera',
+  email: 'alex.rivera@newtonschool.co',
+  username: 'alex_r302'
+};
 
 export default function App() {
   // Check URL query parameter for ?token=... first, then localStorage
@@ -48,10 +96,12 @@ export default function App() {
     return '';
   });
 
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [copiedInterceptor, setCopiedInterceptor] = useState(false);
   
   // Profile, Course, and Performance states
   const [profile, setProfile] = useState(null);
@@ -61,16 +111,23 @@ export default function App() {
   const [subjectsData, setSubjectsData] = useState([]);
   const [overallPerf, setOverallPerf] = useState({ total_lectures: 0, total_lectures_attended: 0 });
 
+  // Filter & Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'safe' | 'warning' | 'danger' | 'simulated'
+
   // Custom groups state
   const [groups, setGroups] = useState(() => {
     const saved = localStorage.getItem('newton_attendance_groups');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : [
+      { id: 'group-theory', name: 'Core CS Theory', subjectHashes: ['sub-dsa-301', 'sub-os-302', 'sub-dbms-304'], threshold: 75 },
+      { id: 'group-labs', name: 'Web & Systems Lab', subjectHashes: ['sub-fs-303', 'sub-cn-305'], threshold: 80 }
+    ];
   });
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupSubjects, setNewGroupSubjects] = useState([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
-  // Manual Adjustments/Overrides state
+  // Manual Adjustments/Overrides state (Simulation Mode)
   const [adjustments, setAdjustments] = useState(() => {
     const saved = localStorage.getItem('newton_attendance_adjustments');
     return saved ? JSON.parse(saved) : {};
@@ -103,14 +160,31 @@ export default function App() {
     localStorage.setItem('newton_theme', theme);
   }, [theme]);
 
-  // When active token exists, fetch live profile and attendance
-  useEffect(() => {
-    if (token && token !== 'null' && token !== 'undefined') {
-      loadLiveDashboard(token, selectedSemesterHash);
-    }
-  }, [token]);
+  // Load Demo Mode data
+  const enableDemoMode = () => {
+    setIsDemoMode(true);
+    setProfile(DEMO_PROFILE);
+    setSemesters(DEMO_SEMESTERS);
+    setSelectedSemesterHash('demo-sem-3');
+    setSemesterTitle('Semester 3 (Computer Science)');
+    setOverallPerf(DEMO_PERFORMANCES['demo-sem-3']);
+    
+    const demoSubjects = DEMO_SEMESTERS[0].learningUnits.map(unit => {
+      const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
+      return {
+        id: unit.id,
+        hash: unit.hash,
+        name: unit.title,
+        shortName: unit.short_display_name,
+        rawAttended: perf.total_lectures_attended,
+        rawTotal: perf.total_lectures
+      };
+    });
+    setSubjectsData(demoSubjects);
+    setError('');
+  };
 
-  const loadLiveDashboard = async (authToken, semHash) => {
+  const loadLiveDashboard = useCallback(async (authToken, semHash) => {
     setLoading(true);
     setError('');
     const cleanToken = authToken.replace(/^Bearer\s+/i, '').trim();
@@ -125,7 +199,7 @@ export default function App() {
       const profRes = await fetch(`${API_BASE}/api/v1/user/me/`, { headers });
       if (!profRes.ok) {
         if (profRes.status === 401) {
-          throw new Error('Authentication failed (401 Unauthorized). Your token may have expired. Please paste a fresh token.');
+          throw new Error('Authentication failed (401 Unauthorized). Your token may have expired. Please paste a fresh token or use the 1-Click Console Scanner.');
         }
         throw new Error(`Profile request failed: HTTP ${profRes.status}`);
       }
@@ -158,6 +232,13 @@ export default function App() {
             foundActiveUnits = unit.learning_unit_courses || [];
           }
         }
+      }
+
+      if (extractedSemesters.length > 0 && foundActiveUnits.length === 0) {
+        // Fallback to first semester if hash not matched
+        activeSemHash = extractedSemesters[0].hash;
+        setSemesterTitle(extractedSemesters[0].title);
+        foundActiveUnits = extractedSemesters[0].learningUnits || [];
       }
 
       setSemesters(extractedSemesters);
@@ -208,18 +289,46 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // When active token exists, fetch live profile and attendance
+  useEffect(() => {
+    if (token && token !== 'null' && token !== 'undefined') {
+      setIsDemoMode(false);
+      loadLiveDashboard(token, selectedSemesterHash);
+    }
+  }, [token, loadLiveDashboard, selectedSemesterHash]);
 
   const handleSemesterChange = (newSemHash) => {
     setSelectedSemesterHash(newSemHash);
-    loadLiveDashboard(token, newSemHash);
+    if (isDemoMode) {
+      const selected = DEMO_SEMESTERS.find(s => s.hash === newSemHash);
+      if (selected) {
+        setSemesterTitle(selected.title);
+        setOverallPerf(DEMO_PERFORMANCES[newSemHash] || { total_lectures: 0, total_lectures_attended: 0 });
+        const demoSubs = selected.learningUnits.map(unit => {
+          const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
+          return {
+            id: unit.id,
+            hash: unit.hash,
+            name: unit.title,
+            shortName: unit.short_display_name,
+            rawAttended: perf.total_lectures_attended,
+            rawTotal: perf.total_lectures
+          };
+        });
+        setSubjectsData(demoSubs);
+      }
+    } else {
+      loadLiveDashboard(token, newSemHash);
+    }
   };
 
   const handleConnect = (e) => {
     if (e) e.preventDefault();
     const clean = inputToken.replace(/^Bearer\s+/i, '').trim();
     if (!clean || clean === 'null' || clean === 'undefined') {
-      setError('Please paste a valid token.');
+      setError('Please paste a valid Bearer token.');
       return;
     }
     localStorage.setItem('newton_bearer_token', clean);
@@ -230,6 +339,7 @@ export default function App() {
     localStorage.removeItem('newton_bearer_token');
     setToken('');
     setInputToken('');
+    setIsDemoMode(false);
     setProfile(null);
     setSemesters([]);
     setSubjectsData([]);
@@ -237,10 +347,10 @@ export default function App() {
     setError('');
   };
 
-  // Dynamic origin snippet so it works on any Vercel domain or localhost
+  // Dynamic origin snippet for easy extraction
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
 
-  // Universal Extractor Snippet that works with Django DRF tokens, JWTs, and nested Redux/localStorage
+  // Universal Extractor Snippet for DevTools
   const universalSnippet = `(() => {
   const isCandidate = (str) => {
     if (typeof str !== 'string') return false;
@@ -251,15 +361,12 @@ export default function App() {
   };
 
   let found = null;
-
-  // 1. Direct keys
   const directKeys = ['authToken', 'token', 'auth_token', 'user_token', 'access_token', 'accessToken', 'key', 'auth'];
   for (const k of directKeys) {
     const val = localStorage.getItem(k);
     if (isCandidate(val)) { found = val.trim().replace(/^Bearer\\s+/i, ''); break; }
   }
 
-  // 2. Search inside JSON objects in localStorage (Redux persist, etc.)
   if (!found) {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -277,11 +384,7 @@ export default function App() {
                 found = subVal.trim().replace(/^Bearer\\s+/i, '');
                 break;
               }
-              if (typeof subVal === 'object' && subVal !== null) {
-                queue.push(subVal);
-              } else if (typeof subVal === 'string' && (subVal.startsWith('{') || subVal.startsWith('['))) {
-                try { queue.push(JSON.parse(subVal)); } catch (e) {}
-              }
+              if (typeof subVal === 'object' && subVal !== null) queue.push(subVal);
             }
           }
           if (found) break;
@@ -291,39 +394,14 @@ export default function App() {
     }
   }
 
-  // 3. Search sessionStorage
-  if (!found) {
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const raw = sessionStorage.getItem(sessionStorage.key(i));
-      if (isCandidate(raw)) { found = raw.trim().replace(/^Bearer\\s+/i, ''); break; }
-    }
-  }
-
-  // 4. Search document.cookie
-  if (!found) {
-    const cookies = document.cookie.split(';');
-    for (const c of cookies) {
-      const parts = c.trim().split('=');
-      if (parts.length === 2 && isCandidate(parts[1]) && /token|auth/i.test(parts[0])) {
-        found = parts[1].trim().replace(/^Bearer\\s+/i, '');
-        break;
-      }
-    }
-  }
-
   if (found) {
-    console.log('%c[✓] Token found: ' + found, 'color: #10b981; font-weight: bold;');
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(found);
-      }
-    } catch(e) {}
+    console.log('%c[✓] Token found: ' + found, 'color: #00F5A0; font-weight: bold;');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(found); } catch(e) {}
     window.open('${currentOrigin}/?token=' + encodeURIComponent(found));
   } else {
     alert('Could not find active token. Please ensure you are logged into my.newtonschool.co!');
   }
 })();`;
-
 
   const copySnippet = () => {
     navigator.clipboard.writeText(universalSnippet.replace(/\n\s+/g, ' '));
@@ -331,7 +409,6 @@ export default function App() {
     setTimeout(() => setCopiedSnippet(false), 3000);
   };
 
-  const [copiedInterceptor, setCopiedInterceptor] = useState(false);
   const interceptorSnippet = `(() => {
   const saveAndOpen = (tok) => {
     if (!tok || tok.length < 15) return;
@@ -366,11 +443,6 @@ export default function App() {
     setTimeout(() => setCopiedInterceptor(false), 3000);
   };
 
-
-
-
-  const bookmarkletCode = `javascript:(function(){const t=localStorage.getItem('authToken')||localStorage.getItem('token');if(!t){alert('Please log in to my.newtonschool.co first!');return;}window.open('${currentOrigin}/?token='+encodeURIComponent(t));})();`;
-
   // Math helper function for attendance calculations
   const calculateAttendanceStats = (attended, total, thresholdPercent) => {
     const threshold = thresholdPercent / 100;
@@ -382,7 +454,7 @@ export default function App() {
       const bunkable = Math.floor((attended - threshold * total) / threshold);
       return {
         percent,
-        status: percent > thresholdPercent + 5 ? 'safe' : 'warning',
+        status: percent >= thresholdPercent + 5 ? 'safe' : 'warning',
         bunkable: Math.max(0, bunkable),
         required: 0
       };
@@ -406,8 +478,8 @@ export default function App() {
   };
 
   // Process subjects with adjustments applied
-  const getProcessedSubjects = () => {
-    return subjectsData.map((sub, index) => {
+  const processedSubjects = useMemo(() => {
+    return subjectsData.map(sub => {
       const hash = sub.hash;
       const adj = adjustments[hash] || { adjAttended: 0, adjTotal: 0 };
       
@@ -426,12 +498,26 @@ export default function App() {
         ...stats
       };
     });
-  };
+  }, [subjectsData, adjustments, targetThreshold]);
 
-  const processedSubjects = getProcessedSubjects();
+  // Filtered subjects based on search query & status filter
+  const filteredSubjects = useMemo(() => {
+    return processedSubjects.filter(sub => {
+      const matchesSearch = sub.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (sub.shortName && sub.shortName.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
 
-  // Calculate overall summary metrics
-  const getOverallStats = () => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'safe') return sub.status === 'safe';
+      if (statusFilter === 'warning') return sub.status === 'warning';
+      if (statusFilter === 'danger') return sub.status === 'danger';
+      if (statusFilter === 'simulated') return sub.hasAdjustments;
+      return true;
+    });
+  }, [processedSubjects, searchQuery, statusFilter]);
+
+  // Overall aggregate summary metrics
+  const overallStats = useMemo(() => {
     if (processedSubjects.length === 0) {
       const att = overallPerf.total_lectures_attended ?? 0;
       const tot = overallPerf.total_lectures ?? 0;
@@ -452,9 +538,17 @@ export default function App() {
       total: sumTotal,
       ...stats
     };
-  };
+  }, [processedSubjects, overallPerf, targetThreshold]);
 
-  const overallStats = getOverallStats();
+  // Health summary metrics
+  const healthStats = useMemo(() => {
+    const total = processedSubjects.length;
+    const safeCount = processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length;
+    const dangerCount = processedSubjects.filter(s => s.status === 'danger').length;
+    const totalSimulations = Object.values(adjustments).reduce((acc, curr) => acc + Math.abs(curr.adjAttended || 0) + Math.abs(curr.adjTotal || 0), 0);
+
+    return { total, safeCount, dangerCount, totalSimulations };
+  }, [processedSubjects, adjustments]);
 
   // Manage adjustments (Simulation Mode)
   const adjustSubjectAttendance = (subjectHash, type, value) => {
@@ -485,6 +579,31 @@ export default function App() {
     });
   };
 
+  // Batch Simulators (e.g. simulate missing 1 full day across all subjects)
+  const applyBatchSimulation = (type, amount = 1) => {
+    setAdjustments(prev => {
+      const next = { ...prev };
+      processedSubjects.forEach(sub => {
+        const current = next[sub.hash] || { adjAttended: 0, adjTotal: 0 };
+        let newAtt = current.adjAttended;
+        let newTot = current.adjTotal;
+
+        if (type === 'attend_all') {
+          newAtt += amount;
+          newTot += amount;
+        } else if (type === 'miss_all') {
+          newTot += amount;
+        }
+
+        const original = subjectsData.find(c => c.hash === sub.hash) || { rawAttended: 0, rawTotal: 0 };
+        if (original.rawAttended + newAtt >= 0 && original.rawTotal + newTot >= 0) {
+          next[sub.hash] = { adjAttended: newAtt, adjTotal: newTot };
+        }
+      });
+      return next;
+    });
+  };
+
   const resetAdjustment = (subjectHash) => {
     setAdjustments(prev => {
       const next = { ...prev };
@@ -497,11 +616,11 @@ export default function App() {
     setAdjustments({});
   };
 
-  // Manage Custom Subject Groups
+  // Custom Groups Management
   const handleCreateGroup = (e) => {
     e.preventDefault();
     if (!newGroupName.trim()) {
-      alert('Please enter a group name');
+      alert('Please enter a group title');
       return;
     }
     if (newGroupSubjects.length === 0) {
@@ -510,7 +629,7 @@ export default function App() {
     }
 
     const newGroup = {
-      id: Date.now().toString(),
+      id: `group-${Date.now()}`,
       name: newGroupName,
       subjectHashes: newGroupSubjects,
       threshold: targetThreshold
@@ -561,400 +680,625 @@ export default function App() {
     };
   };
 
-  const getStatusClass = (status) => {
-    if (status === 'safe') return 'status-safe';
-    if (status === 'warning') return 'status-warning';
-    return 'status-danger';
-  };
-
-  const getPercentageColorClass = (status) => {
-    if (status === 'safe') return 'percentage-safe';
-    if (status === 'warning') return 'percentage-warning';
-    return 'percentage-danger';
-  };
-
-  const getProgressColorClass = (status) => {
-    if (status === 'safe') return 'progress-safe';
-    if (status === 'warning') return 'progress-warning';
-    return 'progress-danger';
-  };
-
-  const getCalcBannerClass = (status) => {
-    if (status === 'safe') return 'calc-banner-safe';
-    if (status === 'warning') return 'calc-banner-warning';
-    return 'calc-banner-danger';
-  };
+  const isAuthenticated = Boolean((token && profile) || isDemoMode);
 
   return (
     <div className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <div className="brand-section">
-          <div className="brand-logo">N+</div>
-          <div>
-            <h1 className="brand-title">
-              Newton School Attendance
-              <span className="brand-badge" style={{ backgroundColor: token && profile ? 'var(--color-success-light)' : 'var(--bg-tertiary)', color: token && profile ? 'var(--color-success-dark)' : 'var(--text-secondary)' }}>
-                {token && profile ? '● Live LMS Sync' : 'Ready'}
-              </span>
-            </h1>
+      {/* Top Glassmorphic Navigation Bar */}
+      <nav className="algora-nav">
+        <div className="brand-wrapper">
+          <div className="brand-badge-logo">
+            <span className="logo-inner">N+</span>
+          </div>
+          <div className="brand-meta">
+            <div className="brand-heading-row">
+              <span className="brand-name">Newton School Attendance</span>
+              {isAuthenticated && (
+                <span className={`status-pill ${isDemoMode ? 'demo' : 'live'}`}>
+                  <span className="pulse-dot"></span>
+                  {isDemoMode ? 'Demo Sandbox' : 'Live LMS Sync'}
+                </span>
+              )}
+            </div>
             {profile && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {profile.first_name} {profile.last_name} ({profile.email || profile.username})
-              </p>
+              <span className="user-identity">
+                {profile.first_name} {profile.last_name} · <span className="mono">@{profile.username || profile.email?.split('@')[0]}</span>
+              </span>
             )}
           </div>
         </div>
-        <div className="header-controls">
-          {token && profile && (
+
+        <div className="nav-actions">
+          {isAuthenticated && (
             <button 
-              className="btn btn-secondary" 
-              onClick={() => loadLiveDashboard(token, selectedSemesterHash)}
+              className="btn-algora btn-algora-secondary" 
+              onClick={() => isDemoMode ? enableDemoMode() : loadLiveDashboard(token, selectedSemesterHash)}
               disabled={loading}
-              title="Refresh attendance from LMS"
-              style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
+              title="Sync latest attendance from LMS"
             >
-              <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <span>Refresh</span>
             </button>
           )}
+
           <button 
-            className="theme-switch-btn" 
+            className="btn-icon-square" 
             onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-            title="Toggle light/dark theme"
+            title="Toggle theme (Dark / Light)"
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          {token && profile && (
+
+          {isAuthenticated && (
             <button 
-              className="btn btn-secondary" 
-              onClick={handleDisconnect} 
-              style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
+              className="btn-algora btn-algora-danger" 
+              onClick={handleDisconnect}
+              title="Disconnect session"
             >
-              <LogOut size={15} /> Logout
+              <LogOut size={14} />
+              <span>Exit</span>
             </button>
           )}
         </div>
-      </header>
+      </nav>
 
-      {/* If not authenticated with a valid token, show Token Connection Screen */}
-      {!token || !profile ? (
-        <div style={{ maxWidth: '680px', margin: '2rem auto' }}>
-          
-          {/* Universal 1-Click Auto-Scanner */}
-          <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--color-primary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-              <Zap size={22} color="var(--color-primary)" />
-              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>⚡ Universal 1-Click Auto-Connect</h2>
+      {/* Main View: Connect Gateway vs Authenticated Command Center */}
+      {!isAuthenticated ? (
+        /* ==========================================================================
+           CONNECT GATEWAY (Algora Developer Aesthetic)
+           ========================================================================== */
+        <div>
+          <div className="connect-hero">
+            <div className="connect-hero-tag">
+              <Sparkles size={14} />
+              <span>ATTENDANCE INTELLIGENCE FOR NEWTON SCHOOL</span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Paste this command into the DevTools Console on your Newton School LMS tab to automatically connect:
+            <h1 className="connect-hero-title">
+              Bunk with <span className="gradient-text">mathematical certainty</span>.
+            </h1>
+            <p className="connect-hero-desc">
+              Real-time LMS synchronization, instant bunk capacity calculations, and a high-precision what-if simulator to keep your academic record secure.
             </p>
-
-            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                <Terminal size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--color-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {universalSnippet.slice(0, 60)}...
-                </code>
-              </div>
-              <button 
-                className="btn btn-primary" 
-                onClick={copySnippet}
-                style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'flex', gap: '0.4rem', flexShrink: 0 }}
-              >
-                {copiedSnippet ? <Check size={14} /> : <Copy size={14} />}
-                {copiedSnippet ? 'Copied!' : 'Copy Code'}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="btn-algora btn-algora-primary" onClick={copySnippet} style={{ padding: '0.7rem 1.4rem', fontSize: '0.92rem' }}>
+                <Zap size={16} />
+                <span>{copiedSnippet ? 'Copied Console Command!' : 'Copy 1-Click Auto Extractor'}</span>
+              </button>
+              <button className="btn-algora btn-algora-secondary" onClick={enableDemoMode} style={{ padding: '0.7rem 1.4rem', fontSize: '0.92rem' }}>
+                <Play size={16} />
+                <span>Explore Live Demo Sandbox</span>
               </button>
             </div>
-
-            <ol style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <li>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details" target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Newton School tab <ExternalLink size={11} style={{ display: 'inline' }} /></a>.</li>
-              <li>Press <kbd style={{ background: 'var(--bg-primary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>F12</kbd> &rarr; <strong>Console</strong> tab.</li>
-              <li>Paste the code and press <kbd style={{ background: 'var(--bg-primary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>Enter</kbd>.</li>
-            </ol>
           </div>
 
-          {/* Network Interceptor Alternative */}
-          <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--color-success)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-              <Zap size={22} color="var(--color-success)" />
-              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>⚡ Method 2: Live Click Interceptor (100% Guaranteed)</h2>
-            </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
-              If storage is cleared, paste this interceptor in the console on Newton School. It hooks into outgoing requests and grabs your token the moment you click any button:
-            </p>
-
-            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                <Terminal size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--color-success)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {interceptorSnippet.slice(0, 60)}...
-                </code>
-              </div>
-              <button 
-                className="btn btn-primary" 
-                onClick={copyInterceptor}
-                style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'flex', gap: '0.4rem', flexShrink: 0, background: 'var(--color-success)' }}
-              >
-                {copiedInterceptor ? <Check size={14} /> : <Copy size={14} />}
-                {copiedInterceptor ? 'Copied!' : 'Copy Code'}
-              </button>
-            </div>
-
-            <ol style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <li>On Newton School tab console, paste this code and press <kbd style={{ background: 'var(--bg-primary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>Enter</kbd>.</li>
-              <li>Click on any tab (e.g. <strong>My Timeline</strong>) or refresh the page.</li>
-            </ol>
-          </div>
-
-          {/* Direct Manual Paste */}
-          <div className="card">
-
-            <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-              📝 Paste Token Directly
-            </h3>
-            
-            <form onSubmit={handleConnect}>
-              <div className="token-input-group">
-                <textarea 
-                  id="token-field"
-                  className="token-input"
-                  rows={2}
-                  placeholder="Paste Bearer token here..."
-                  value={inputToken}
-                  onChange={(e) => setInputToken(e.target.value)}
-                />
-              </div>
-
-              {error && (
-                <div style={{ color: 'var(--color-danger)', backgroundColor: 'var(--color-danger-light)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1rem', border: '1px solid rgba(244,63,94,0.2)' }}>
-                  <AlertTriangle size={15} style={{ display: 'inline', marginRight: '5px' }} />
-                  {error}
+          <div className="connect-methods-grid">
+            {/* Bento Card 1: 1-Click DevTools Extractor */}
+            <div className="bento-card glow-mint">
+              <div className="bento-card-header">
+                <div className="bento-title-group">
+                  <span className="eyebrow mint">01 // RECOMMENDED METHOD</span>
+                  <h3 className="bento-title">⚡ 1-Click Console Scanner</h3>
                 </div>
-              )}
+                <div className="status-pill live">Instant Sync</div>
+              </div>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Run this automated script inside your browser's DevTools console on the Newton School LMS tab. It extracts your active session and redirects here securely:
+              </p>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-                {loading ? <RefreshCw className="animate-spin" size={18} /> : 'Connect Account'}
-              </button>
-            </form>
+              <div className="terminal-card">
+                <div className="terminal-header">
+                  <div className="terminal-dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <span className="terminal-title">bash / devtools_console.js</span>
+                  <button 
+                    className="btn-algora btn-algora-primary" 
+                    onClick={copySnippet}
+                    style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                  >
+                    {copiedSnippet ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedSnippet ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+                <div className="terminal-body">
+                  {universalSnippet.slice(0, 110)}... [click copy to grab full code]
+                </div>
+              </div>
+
+              <ul className="step-instruction-list">
+                <li className="step-item">
+                  <span className="step-badge">1</span>
+                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-mint)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+                </li>
+                <li className="step-item">
+                  <span className="step-badge">2</span>
+                  <span>Press <kbd>F12</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd>) &rarr; <strong>Console</strong></span>
+                </li>
+                <li className="step-item">
+                  <span className="step-badge">3</span>
+                  <span>Paste code and press <kbd>Enter</kbd></span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Bento Card 2: Manual Direct Token Input */}
+            <div className="bento-card">
+              <div className="bento-card-header">
+                <div className="bento-title-group">
+                  <span className="eyebrow cyan">02 // MANUAL ACCESS</span>
+                  <h3 className="bento-title">🔑 Direct Bearer Token</h3>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                If you already have your bearer authentication token from request headers or curl, paste it directly:
+              </p>
+
+              <form onSubmit={handleConnect}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label className="eyebrow" style={{ display: 'block', marginBottom: '0.4rem' }}>
+                    Bearer Token / JWT:
+                  </label>
+                  <textarea 
+                    rows={3}
+                    className="algora-select mono"
+                    style={{ width: '100%', resize: 'none', fontSize: '0.8rem', padding: '0.75rem' }}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={inputToken}
+                    onChange={(e) => setInputToken(e.target.value)}
+                  />
+                </div>
+
+                {error && (
+                  <div style={{ color: 'var(--accent-crimson)', background: 'var(--accent-crimson-subtle)', border: '1px solid rgba(255,71,87,0.2)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', marginBottom: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <AlertTriangle size={15} />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" className="btn-algora btn-algora-primary" style={{ flex: 1 }} disabled={loading}>
+                    {loading ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                    <span>Authenticate Session</span>
+                  </button>
+                  <button type="button" className="btn-algora btn-algora-secondary" onClick={enableDemoMode} title="Try without credentials">
+                    Demo Mode
+                  </button>
+                </div>
+              </form>
+
+              {/* Network Interceptor Hook Secondary Section */}
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span className="eyebrow purple">03 // NETWORK INTERCEPTOR</span>
+                  <button className="btn-algora btn-algora-secondary" onClick={copyInterceptor} style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}>
+                    {copiedInterceptor ? <Check size={11} /> : <Copy size={11} />}
+                    <span>{copiedInterceptor ? 'Copied' : 'Copy Interceptor'}</span>
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Hooks into active XMLHttpRequest/fetch on LMS and captures token on any button click.
+                </p>
+              </div>
+            </div>
           </div>
 
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={14} color="var(--accent-mint)" />
+            <span>Zero-Trust Architecture: Your bearer tokens remain strictly stored in local browser memory and never touch remote proxy servers.</span>
+          </div>
         </div>
       ) : (
-        /* Live LMS Dashboard */
-        <>
-          {/* Top Control Bar */}
-          <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.5rem' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <GraduationCap size={20} color="var(--color-primary)" />
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Academic Unit:</span>
-                
+        /* ==========================================================================
+           LIVE LMS COMMAND CENTER (Algora Developer Aesthetic)
+           ========================================================================== */
+        <div>
+          {/* Top Intelligence Toolbar */}
+          <div className="intelligence-bar">
+            <div className="control-cluster">
+              <div className="unit-select-wrapper">
+                <GraduationCap size={18} color="var(--accent-mint)" />
+                <span className="eyebrow" style={{ marginRight: '0.2rem' }}>Unit:</span>
                 {semesters.length > 0 ? (
                   <select 
-                    className="form-input" 
-                    style={{ margin: 0, width: 'auto', padding: '0.4rem 2rem 0.4rem 0.75rem', fontSize: '0.85rem', fontWeight: 600 }}
+                    className="algora-select"
                     value={selectedSemesterHash}
                     onChange={(e) => handleSemesterChange(e.target.value)}
                   >
                     {semesters.map(s => (
-                      <option key={s.hash} value={s.hash}>{s.title} {s.isActive ? ' (Current)' : ''}</option>
+                      <option key={s.hash} value={s.hash}>
+                        {s.title} {s.isActive ? '· [Current]' : ''}
+                      </option>
                     ))}
                   </select>
                 ) : (
-                  <code style={{ background: 'var(--bg-tertiary)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 700 }}>
                     {semesterTitle} ({selectedSemesterHash})
-                  </code>
+                  </span>
                 )}
               </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: '260px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Target Attendance:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{targetThreshold}%</span>
-                </div>
+            </div>
+
+            <div className="control-cluster">
+              <div className="target-slider-panel">
+                <span className="eyebrow">Target:</span>
                 <input 
                   type="range"
                   min="50"
                   max="100"
                   value={targetThreshold}
                   onChange={(e) => setTargetThreshold(parseInt(e.target.value))}
-                  className="slider-input"
-                  style={{ width: '120px' }}
+                  className="algora-range-input"
                 />
+                <span className="slider-value-badge">{targetThreshold}%</span>
               </div>
+
+              <div className="preset-pills-row">
+                {[75, 80, 85, 90].map(val => (
+                  <button 
+                    key={val}
+                    className={`preset-pill-btn ${targetThreshold === val ? 'active' : ''}`}
+                    onClick={() => setTargetThreshold(val)}
+                  >
+                    {val}%
+                  </button>
+                ))}
+              </div>
+
+              {healthStats.totalSimulations > 0 && (
+                <button 
+                  className="btn-algora btn-algora-secondary" 
+                  onClick={resetAllAdjustments}
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset Simulations ({healthStats.totalSimulations})</span>
+                </button>
+              )}
             </div>
           </div>
 
           {error && (
-            <div style={{ color: 'var(--color-danger)', backgroundColor: 'var(--color-danger-light)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1.5rem', border: '1px solid rgba(244,63,94,0.2)' }}>
-              <AlertTriangle size={16} style={{ display: 'inline', marginRight: '8px' }} />
-              {error}
+            <div style={{ color: 'var(--accent-crimson)', background: 'var(--accent-crimson-subtle)', border: '1px solid rgba(255,71,87,0.25)', padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-md)', fontSize: '0.86rem', marginBottom: '1.5rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+              <AlertTriangle size={18} />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Stats Summary Panel */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Overall Attendance</span>
-              <span className="stat-value">{overallStats.percent.toFixed(1)}%</span>
-              <span className={`stat-desc ${getPercentageColorClass(overallStats.status)}`} style={{ fontWeight: 600 }}>
-                {overallStats.percent >= targetThreshold ? 'Above Target' : 'Below Target'}
+          {/* Bento Stats Hero Metrics */}
+          <div className="stats-bento-grid">
+            {/* Metric 1: Overall Percentage */}
+            <div className={`bento-card metric-card ${overallStats.status === 'safe' ? 'glow-mint' : overallStats.status === 'danger' ? 'glow-crimson' : ''}`}>
+              <div className="metric-top">
+                <span className="eyebrow">AGGREGATE RATE</span>
+                <div className={`metric-icon-bubble ${overallStats.status === 'safe' ? '' : overallStats.status === 'warning' ? 'amber' : 'crimson'}`}>
+                  <Activity size={16} />
+                </div>
+              </div>
+              <div className="metric-value-row">
+                <span className="metric-huge-number">{overallStats.percent.toFixed(1)}%</span>
+                <span className={`metric-delta-tag ${overallStats.percent >= targetThreshold ? 'safe' : 'danger'}`}>
+                  {overallStats.percent >= targetThreshold 
+                    ? `+${(overallStats.percent - targetThreshold).toFixed(1)}%`
+                    : `-${(targetThreshold - overallStats.percent).toFixed(1)}%`
+                  }
+                </span>
+              </div>
+              <span className="metric-subtext">
+                {overallStats.percent >= targetThreshold 
+                  ? `Safely above minimum target of ${targetThreshold}%`
+                  : `Currently below mandated ${targetThreshold}% threshold`
+                }
               </span>
-              <div className="stat-icon">📈</div>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Total Conducted</span>
-              <span className="stat-value">{overallStats.total}</span>
-              <span className="stat-desc">Classes across {processedSubjects.length} subjects</span>
-              <div className="stat-icon">🏫</div>
+            {/* Metric 2: Net Action Verdict */}
+            <div className={`bento-card metric-card ${overallStats.percent >= targetThreshold ? 'glow-mint' : 'glow-crimson'}`}>
+              <div className="metric-top">
+                <span className="eyebrow">NET VERDICT</span>
+                <div className={`metric-icon-bubble ${overallStats.percent >= targetThreshold ? '' : 'crimson'}`}>
+                  {overallStats.percent >= targetThreshold ? <Flame size={16} /> : <AlertTriangle size={16} />}
+                </div>
+              </div>
+              <div className="metric-value-row">
+                <span className="metric-huge-number" style={{ color: overallStats.percent >= targetThreshold ? 'var(--accent-mint)' : 'var(--accent-crimson)' }}>
+                  {overallStats.percent >= targetThreshold 
+                    ? `Bunk ${overallStats.bunkable}` 
+                    : `Attend ${overallStats.required}`
+                  }
+                </span>
+              </div>
+              <span className="metric-subtext">
+                {overallStats.percent >= targetThreshold 
+                  ? `Lectures can be safely skipped while staying ≥ ${targetThreshold}%`
+                  : `Consecutive classes required to recover target`
+                }
+              </span>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Total Attended</span>
-              <span className="stat-value">{overallStats.attended}</span>
-              <span className="stat-desc">Classes present</span>
-              <div className="stat-icon">✅</div>
+            {/* Metric 3: Total Conducted vs Attended */}
+            <div className="bento-card metric-card">
+              <div className="metric-top">
+                <span className="eyebrow">TOTAL RATIO</span>
+                <div className="metric-icon-bubble cyan">
+                  <Calculator size={16} />
+                </div>
+              </div>
+              <div className="metric-value-row">
+                <span className="metric-huge-number mono">{overallStats.attended} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
+              </div>
+              <span className="metric-subtext">
+                Total lectures attended across all enrolled subjects
+              </span>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Status & Action</span>
-              {overallStats.percent >= targetThreshold ? (
-                <>
-                  <span className="stat-value" style={{ color: 'var(--color-success)' }}>
-                    Bunk {overallStats.bunkable}
-                  </span>
-                  <span className="stat-desc">Safe while &ge; {targetThreshold}%</span>
-                </>
-              ) : (
-                <>
-                  <span className="stat-value" style={{ color: 'var(--color-danger)' }}>
-                    Attend {overallStats.required}
-                  </span>
-                  <span className="stat-desc">Consecutive classes needed</span>
-                </>
-              )}
-              <div className="stat-icon">🛡️</div>
+            {/* Metric 4: Health Breakdown */}
+            <div className="bento-card metric-card">
+              <div className="metric-top">
+                <span className="eyebrow">COURSE HEALTH</span>
+                <div className="metric-icon-bubble amber">
+                  <Layers size={16} />
+                </div>
+              </div>
+              <div className="metric-value-row">
+                <span className="metric-huge-number mono">{healthStats.safeCount} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
+                <span className="metric-delta-tag safe">Safe</span>
+              </div>
+              <span className="metric-subtext">
+                {healthStats.dangerCount === 0 
+                  ? 'All courses currently in good standing' 
+                  : `${healthStats.dangerCount} course(s) require immediate attendance boost`
+                }
+              </span>
             </div>
           </div>
 
-          {/* Dashboard Two-Column Grid */}
-          <div className="dashboard-grid">
-            {/* Left: Subjects List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div className="card-title-container" style={{ margin: 0 }}>
-                <h2>Subject Breakdown ({processedSubjects.length} Courses)</h2>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', gap: '0.3rem', alignItems: 'center' }}
-                    onClick={resetAllAdjustments}
-                  >
-                    <RotateCcw size={14} /> Reset Simulations
-                  </button>
-                </div>
+          {/* Quick Batch Simulator Drawer / Banner */}
+          <div className="batch-sim-banner">
+            <div className="batch-sim-info">
+              <Sparkles size={20} color="var(--accent-mint)" />
+              <div>
+                <span className="eyebrow mint" style={{ display: 'block', marginBottom: '0.1rem' }}>WHAT-IF ENGINE // BATCH PROJECTIONS</span>
+                <span style={{ fontSize: '0.86rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                  Simulate universal timetable schedule scenarios across all courses:
+                </span>
               </div>
+            </div>
 
+            <div className="batch-sim-actions">
+              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 1)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
+                <Plus size={13} color="var(--accent-mint)" />
+                <span>+1 All (Day Present)</span>
+              </button>
+              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 1)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
+                <Minus size={13} color="var(--accent-crimson)" />
+                <span>+1 Miss All (Bunk Day)</span>
+              </button>
+              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 3)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
+                <span>+3 Full Week Present</span>
+              </button>
+              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
+                <span>Miss Full Week</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search, Filter & View Controls */}
+          <div className="search-filter-row">
+            <div className="search-input-box">
+              <Search size={16} color="var(--text-muted)" />
+              <input 
+                type="text"
+                placeholder="Search subject by title or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="filter-pills-group">
+              <button 
+                className={`filter-tab-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('all')}
+              >
+                <span>All Subjects</span>
+                <span className="filter-count">{processedSubjects.length}</span>
+              </button>
+              <button 
+                className={`filter-tab-btn ${statusFilter === 'safe' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('safe')}
+              >
+                <span style={{ color: 'var(--accent-mint)' }}>●</span>
+                <span>Safe</span>
+                <span className="filter-count">{processedSubjects.filter(s => s.status === 'safe').length}</span>
+              </button>
+              <button 
+                className={`filter-tab-btn ${statusFilter === 'warning' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('warning')}
+              >
+                <span style={{ color: 'var(--accent-amber)' }}>●</span>
+                <span>Caution</span>
+                <span className="filter-count">{processedSubjects.filter(s => s.status === 'warning').length}</span>
+              </button>
+              <button 
+                className={`filter-tab-btn ${statusFilter === 'danger' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('danger')}
+              >
+                <span style={{ color: 'var(--accent-crimson)' }}>●</span>
+                <span>Critical</span>
+                <span className="filter-count">{processedSubjects.filter(s => s.status === 'danger').length}</span>
+              </button>
+              {healthStats.totalSimulations > 0 && (
+                <button 
+                  className={`filter-tab-btn ${statusFilter === 'simulated' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter('simulated')}
+                >
+                  <Sparkles size={12} color="var(--accent-cyan)" />
+                  <span>Simulated</span>
+                  <span className="filter-count">{processedSubjects.filter(s => s.hasAdjustments).length}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main Dashboard Grid */}
+          <div className="main-layout-grid">
+            {/* Left Column: Subjects Bento Stream */}
+            <div>
               {loading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div className="card skeleton skeleton-card"></div>
-                  <div className="card skeleton skeleton-card"></div>
-                  <div className="card skeleton skeleton-card"></div>
+                <div className="subjects-stream">
+                  <div className="skeleton-box"></div>
+                  <div className="skeleton-box"></div>
+                  <div className="skeleton-box"></div>
+                  <div className="skeleton-box"></div>
                 </div>
-              ) : processedSubjects.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-secondary)' }}>
-                  <p>No active subjects found for this semester.</p>
+              ) : filteredSubjects.length === 0 ? (
+                <div className="bento-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem', color: 'var(--text-muted)' }}>
+                  <Search size={32} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>No matching courses found</h3>
+                  <p style={{ fontSize: '0.85rem' }}>Try refining your search query or reset your status filter.</p>
                 </div>
               ) : (
-                <div className="subjects-grid">
-                  {processedSubjects.map(subject => (
-                    <div key={subject.hash} className={`card subject-card ${getStatusClass(subject.status)}`}>
-                      <div className="subject-header">
-                        <div>
-                          <h3 className="subject-title">{subject.name}</h3>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            Portal: {subject.rawAttended}/{subject.rawTotal}
-                          </span>
-                          {subject.hasAdjustments && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 600, marginLeft: '0.5rem' }}>
-                              (Simulated: {subject.attended}/{subject.total})
-                            </span>
-                          )}
-                        </div>
-                        <div className="subject-stats-text">
-                          <div className={`subject-percentage ${getPercentageColorClass(subject.status)}`}>
-                            {subject.percent.toFixed(1)}%
+                <div className="subjects-stream">
+                  {filteredSubjects.map(subject => (
+                    <div key={subject.hash} className={`subject-bento-tile ${subject.status}`}>
+                      {/* Tile Header & Stats */}
+                      <div>
+                        <div className="tile-top-row">
+                          <div>
+                            <h4 className="subject-title-text">{subject.name}</h4>
+                            <span className="subject-code-tag">#{subject.shortName || subject.hash}</span>
                           </div>
-                          <div>{subject.attended} / {subject.total} classes</div>
+
+                          <div className="tile-rate-badge">
+                            <div className={`rate-percentage-number ${subject.status}`}>
+                              {subject.percent.toFixed(1)}%
+                            </div>
+                            <div className="rate-raw-fraction">
+                              {subject.attended} / {subject.total} classes
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Glowing Progress Bar with Target Marker */}
+                        <div style={{ marginTop: '0.85rem' }}>
+                          <div className="progress-track-wrapper">
+                            <div className="progress-track">
+                              <div 
+                                className={`progress-fill ${subject.status}`} 
+                                style={{ width: `${Math.min(100, Math.max(0, subject.percent))}%` }}
+                              ></div>
+                              <div 
+                                className="progress-target-marker" 
+                                style={{ left: `${targetThreshold}%` }}
+                                title={`Threshold: ${targetThreshold}%`}
+                              ></div>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Progress bar */}
-                      <div className="progress-container">
-                        <div 
-                          className={`progress-bar ${getProgressColorClass(subject.status)}`}
-                          style={{ width: `${Math.min(100, subject.percent)}%` }}
-                        ></div>
-                        <div 
-                          className="progress-threshold-line"
-                          style={{ left: `${targetThreshold}%` }}
-                          title={`Threshold ${targetThreshold}%`}
-                        ></div>
-                      </div>
-
-                      {/* Calculations Banner */}
-                      <div className={`calc-banner ${getCalcBannerClass(subject.status)}`}>
+                      {/* Action Verdict Banner */}
+                      <div className={`action-verdict-banner ${subject.status}`}>
                         {subject.total === 0 ? (
                           <>
-                            <Info size={16} />
-                            <span>No classes conducted yet for this subject.</span>
+                            <Info size={15} />
+                            <span>No lectures conducted yet.</span>
                           </>
                         ) : subject.percent >= targetThreshold ? (
                           <>
-                            <CheckCircle2 size={16} />
+                            <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
                             <span>
-                              <strong>Safe!</strong> You can bunk <strong>{subject.bunkable}</strong> more classes while staying above {targetThreshold}%.
+                              Safe to bunk <strong>{subject.bunkable}</strong> more {subject.bunkable === 1 ? 'class' : 'classes'} while staying above {targetThreshold}%.
                             </span>
                           </>
                         ) : (
                           <>
-                            <AlertTriangle size={16} />
+                            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
                             <span>
-                              <strong>Attendance low!</strong> You must attend <strong>{subject.required}</strong> consecutive classes to reach {targetThreshold}%.
+                              Must attend <strong>{subject.required}</strong> consecutive {subject.required === 1 ? 'class' : 'classes'} to reach {targetThreshold}%.
                             </span>
                           </>
                         )}
                       </div>
 
-                      {/* Manual Override Controls */}
-                      <div className="adjustments-panel">
-                        <span className="adj-title">Simulation / What-if Planning</span>
-                        <div className="adj-controls-grid">
-                          <div className="adj-control-group">
-                            <span className="adj-label">Simulate Attend (+1)</span>
-                            <div className="adj-btn-container">
-                              <button className="adj-btn" onClick={() => adjustSubjectAttendance(subject.hash, 'attend', -1)}>-</button>
-                              <span className={`adj-value ${subject.adjAttended > 0 ? 'adj-value-simulated' : ''}`}>
+                      {/* Interactive Tactile Stepper Simulator */}
+                      <div className="simulator-box">
+                        <div className="simulator-box-header">
+                          <span className="eyebrow" style={{ fontSize: '0.68rem' }}>
+                            <Sparkles size={11} color="var(--accent-mint)" />
+                            WHAT-IF STEPPER
+                          </span>
+                          {subject.hasAdjustments && (
+                            <button 
+                              onClick={() => resetAdjustment(subject.hash)}
+                              style={{ background: 'none', border: 'none', color: 'var(--accent-crimson)', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="stepper-row">
+                          {/* Attend Stepper */}
+                          <div className="stepper-unit">
+                            <span className="stepper-label">Attend (+1)</span>
+                            <div className="stepper-controls">
+                              <button 
+                                className="stepper-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'attend', -1)}
+                                title="Subtract simulated attend"
+                              >
+                                -
+                              </button>
+                              <span className={`stepper-number ${subject.adjAttended > 0 ? 'active-sim' : ''}`}>
                                 {subject.adjAttended >= 0 ? `+${subject.adjAttended}` : subject.adjAttended}
                               </span>
-                              <button className="adj-btn" onClick={() => adjustSubjectAttendance(subject.hash, 'attend', 1)}>+</button>
+                              <button 
+                                className="stepper-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'attend', 1)}
+                                title="Add simulated attend"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
 
-                          <div className="adj-control-group">
-                            <span className="adj-label">Simulate Miss (+1)</span>
-                            <div className="adj-btn-container">
-                              <button className="adj-btn" onClick={() => adjustSubjectAttendance(subject.hash, 'miss', -1)}>-</button>
-                              <span className={`adj-value ${subject.adjTotal - subject.adjAttended > 0 ? 'adj-value-simulated' : ''}`}>
+                          {/* Miss Stepper */}
+                          <div className="stepper-unit">
+                            <span className="stepper-label">Miss (+1)</span>
+                            <div className="stepper-controls">
+                              <button 
+                                className="stepper-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'miss', -1)}
+                                title="Subtract simulated miss"
+                              >
+                                -
+                              </button>
+                              <span className={`stepper-number ${subject.adjTotal - subject.adjAttended > 0 ? 'active-miss' : ''}`}>
                                 +{subject.adjTotal - subject.adjAttended}
                               </span>
-                              <button className="adj-btn" onClick={() => adjustSubjectAttendance(subject.hash, 'miss', 1)}>+</button>
+                              <button 
+                                className="stepper-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'miss', 1)}
+                                title="Add simulated miss"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
                         </div>
+
                         {subject.hasAdjustments && (
-                          <button className="reset-adj-btn" onClick={() => resetAdjustment(subject.hash)}>Reset simulations for this subject</button>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>
+                            LMS: {subject.rawAttended}/{subject.rawTotal} &rarr; Projected: {subject.attended}/{subject.total}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -963,135 +1307,118 @@ export default function App() {
               )}
             </div>
 
-            {/* Right Side: Saved Groups & Controls */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Right Column: Custom Groups & Math Explainer */}
+            <div className="sidebar-stack">
               
-              {/* Calculations Explainer Card */}
-              <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg-secondary), var(--bg-primary))' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                  <Sliders size={18} color="var(--color-primary)" />
-                  How Calculations Work
-                </h3>
-                <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '0.5rem' }}>
-                  <strong>Bunkable Formula:</strong>
-                  <code style={{ display: 'block', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '4px', margin: '0.3rem 0', fontFamily: 'monospace' }}>
-                    Bunkable = &lfloor;(Attended - Target &times; Total) / Target&rfloor;
-                  </code>
-                </p>
-                <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  <strong>Required Consecutive Formula:</strong>
-                  <code style={{ display: 'block', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '4px', margin: '0.3rem 0', fontFamily: 'monospace' }}>
-                    Required = &lceil;(Target &times; Total - Attended) / (1 - Target)&rceil;
-                  </code>
-                </p>
-              </div>
-
-              {/* Subject Groups Manager */}
-              <div className="card">
-                <div className="card-title-container">
-                  <h3>Subject Groups</h3>
+              {/* Subject Groups Bento Box */}
+              <div className="bento-card">
+                <div className="bento-card-header">
+                  <div className="bento-title-group">
+                    <span className="eyebrow purple">AGGREGATIONS</span>
+                    <h3 className="bento-title">Subject Groups</h3>
+                  </div>
                   <button 
-                    className="btn btn-secondary" 
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', gap: '0.2rem', alignItems: 'center' }}
+                    className="btn-algora btn-algora-secondary"
+                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.76rem' }}
                     onClick={() => setShowCreateGroup(prev => !prev)}
                   >
-                    <FolderPlus size={14} /> New Group
+                    <FolderPlus size={13} />
+                    <span>New Group</span>
                   </button>
                 </div>
 
-                {/* Create Group Form */}
+                {/* Create Group Form Modal / Inline Drawer */}
                 {showCreateGroup && (
-                  <form onSubmit={handleCreateGroup} className="card create-group-card" style={{ padding: '1rem', borderStyle: 'dashed' }}>
-                    <h4 style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>Create New Group</h4>
+                  <form onSubmit={handleCreateGroup} style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)', marginBottom: '1.25rem' }}>
+                    <span className="eyebrow" style={{ marginBottom: '0.4rem', display: 'block' }}>Create Custom Bucket:</span>
                     <input 
-                      type="text" 
-                      placeholder="Group Name (e.g. Core Programming)"
-                      className="form-input"
+                      type="text"
+                      placeholder="Group Name (e.g. Lab Courses, Minor)"
+                      className="algora-select"
+                      style={{ width: '100%', marginBottom: '0.75rem' }}
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
                     />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>Select Subjects:</span>
-                    <div className="subject-selector-grid">
+
+                    <span className="eyebrow" style={{ marginBottom: '0.4rem', display: 'block' }}>Select Courses:</span>
+                    <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.5rem', background: 'var(--bg-canvas)', marginBottom: '0.75rem' }}>
                       {processedSubjects.map(sub => (
-                        <label key={sub.hash} className="subject-checkbox-label">
+                        <label key={sub.hash} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '0.25rem 0', cursor: 'pointer' }}>
                           <input 
                             type="checkbox"
                             checked={newGroupSubjects.includes(sub.hash)}
                             onChange={() => toggleGroupSubject(sub.hash)}
                           />
-                          {sub.name}
+                          <span>{sub.name}</span>
                         </label>
                       ))}
                     </div>
-                    <div className="btn-group" style={{ margin: 0 }}>
-                      <button type="submit" className="btn btn-primary" style={{ padding: '0.4rem', fontSize: '0.8rem' }}>Create</button>
-                      <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem', fontSize: '0.8rem' }} onClick={() => setShowCreateGroup(false)}>Cancel</button>
+
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button type="submit" className="btn-algora btn-algora-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.78rem' }}>Create</button>
+                      <button type="button" className="btn-algora btn-algora-secondary" style={{ padding: '0.4rem', fontSize: '0.78rem' }} onClick={() => setShowCreateGroup(false)}>Cancel</button>
                     </div>
                   </form>
                 )}
 
                 {/* Groups List */}
-                <div className="groups-container">
+                <div>
                   {groups.length === 0 ? (
-                    <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem 0' }}>
-                      No subject groups created yet. Groups let you aggregate and verify attendance across multiple related courses (e.g. Theory vs Practical).
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                      No custom groups created. Groups let you calculate aggregate attendance across combinations of subjects (e.g. Practicals vs Core).
                     </p>
                   ) : (
                     groups.map(group => {
                       const stats = getGroupStats(group);
                       return (
-                        <div key={group.id} className={`card group-card ${getStatusClass(stats.status)}`} style={{ padding: '1rem' }}>
-                          <div className="group-card-header">
+                        <div key={group.id} className="group-tile">
+                          <div className="group-tile-header">
                             <div>
-                              <span className="group-name">{group.name}</span>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                                {group.subjectHashes.length} subject(s) grouped
-                              </div>
+                              <div className="group-title-text">{group.name}</div>
+                              <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                {group.subjectHashes.length} course(s) aggregated
+                              </span>
                             </div>
                             <button 
-                              className="btn-icon-only" 
-                              style={{ width: '28px', height: '28px', border: 'none', background: 'transparent' }}
                               onClick={() => handleDeleteGroup(group.id)}
+                              style={{ background: 'none', border: 'none', color: 'var(--accent-crimson)', cursor: 'pointer', opacity: 0.6 }}
                               title="Delete group"
                             >
-                              <Trash2 size={14} color="var(--color-danger)" />
+                              <Trash2 size={14} />
                             </button>
                           </div>
 
-                          <div className="group-card-header" style={{ margin: '0.5rem 0' }}>
-                            <span className={`subject-percentage ${getPercentageColorClass(stats.status)}`} style={{ fontSize: '1.1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0.5rem 0' }}>
+                            <span className={`rate-percentage-number ${stats.status}`} style={{ fontSize: '1.25rem' }}>
                               {stats.percent.toFixed(1)}%
                             </span>
-                            <span className="group-stats">{stats.attended} / {stats.total} classes</span>
+                            <span className="group-stats-fraction">{stats.attended} / {stats.total} classes</span>
                           </div>
 
-                          {/* Group-specific target threshold slider */}
-                          <div className="group-slider-container">
-                            <div className="group-slider-header">
-                              <span className="group-slider-label">Target:</span>
-                              <span className="group-slider-value">{stats.threshold}%</span>
-                            </div>
+                          {/* Group Threshold Slider */}
+                          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <span className="eyebrow" style={{ fontSize: '0.68rem' }}>Target: {stats.threshold}%</span>
                             <input 
                               type="range"
                               min="50"
                               max="100"
                               value={stats.threshold}
                               onChange={(e) => handleUpdateGroupThreshold(group.id, e.target.value)}
-                              className="slider-input"
+                              className="algora-range-input"
+                              style={{ width: '80px' }}
                             />
                           </div>
 
-                          {/* Group calculations indicator */}
-                          <div className={`calc-banner ${getCalcBannerClass(stats.status)}`} style={{ margin: '0.75rem 0 0 0', padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}>
+                          <div className={`action-verdict-banner ${stats.status}`} style={{ marginTop: '0.6rem', padding: '0.45rem 0.65rem', fontSize: '0.76rem' }}>
                             {stats.percent >= stats.threshold ? (
                               <>
-                                <CheckCircle2 size={14} />
+                                <CheckCircle2 size={13} />
                                 <span>Can bunk <strong>{stats.bunkable}</strong> classes</span>
                               </>
                             ) : (
                               <>
-                                <AlertTriangle size={14} />
-                                <span>Attend <strong>{stats.required}</strong> consecutive classes</span>
+                                <AlertTriangle size={13} />
+                                <span>Need <strong>{stats.required}</strong> consecutive classes</span>
                               </>
                             )}
                           </div>
@@ -1102,9 +1429,38 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Math Formula & Algora Engineering Inspector */}
+              <div className="bento-card">
+                <div className="bento-card-header" style={{ marginBottom: '0.75rem' }}>
+                  <div className="bento-title-group">
+                    <span className="eyebrow cyan">MATHEMATICAL ENGINE</span>
+                    <h4 className="bento-title" style={{ fontSize: '1rem' }}>Formulas & Proofs</h4>
+                  </div>
+                  <Code2 size={18} color="var(--accent-cyan)" />
+                </div>
+
+                <div className="formula-box">
+                  <div style={{ marginBottom: '0.6rem' }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>Bunkable Capacity:</strong>
+                    <code className="formula-code">
+                      ⌊(Attended - T × Total) / T⌋
+                    </code>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Where T = Target % / 100.</span>
+                  </div>
+
+                  <div>
+                    <strong style={{ color: 'var(--text-primary)' }}>Recovery Requirement:</strong>
+                    <code className="formula-code">
+                      ⌈(T × Total - Attended) / (1 - T)⌉
+                    </code>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Consecutive lectures to restore compliance.</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
