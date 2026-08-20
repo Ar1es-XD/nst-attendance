@@ -12,8 +12,6 @@ import {
   Info, 
   LogOut, 
   ShieldCheck, 
-  Moon, 
-  Sun, 
   RefreshCw, 
   Search, 
   Sparkles, 
@@ -23,12 +21,9 @@ import {
   Code2, 
   Play, 
   Flame,
-  Swords,
-  Crosshair,
-  Trophy,
-  Gamepad2,
-  Shield,
-  Target
+  Layers,
+  BookOpen,
+  Sliders
 } from 'lucide-react';
 
 const API_BASE = "";
@@ -81,14 +76,6 @@ const DEMO_PROFILE = {
   username: 'alex_r302'
 };
 
-// Calculate gamified rank and status tier
-const getTierInfo = (percent, threshold = 75) => {
-  if (percent >= 90) return { tier: 'S-RANK', label: 'GOD-MODE', color: 'var(--accent-cyan)' };
-  if (percent >= 80) return { tier: 'A-RANK', label: 'OPTIMAL SHIELD', color: 'var(--accent-safe)' };
-  if (percent >= threshold) return { tier: 'B-RANK', label: 'SURVIVAL ZONE', color: 'var(--accent-warning)' };
-  return { tier: 'CRITICAL', label: 'SHIELD BREACHED', color: 'var(--accent-danger)' };
-};
-
 export default function App() {
   // Check URL query parameter for ?token=... first, then localStorage
   const [token, setToken] = useState(() => {
@@ -126,12 +113,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'safe' | 'warning' | 'danger' | 'simulated'
 
-  // Custom groups state (Guilds / Clans)
+  // Custom groups state (Subject Buckets)
   const [groups, setGroups] = useState(() => {
     const saved = localStorage.getItem('newton_attendance_groups');
     return saved ? JSON.parse(saved) : [
-      { id: 'group-theory', name: 'Core CS Theory Clan', subjectHashes: ['sub-dsa-301', 'sub-os-302', 'sub-dbms-304'], threshold: 75 },
-      { id: 'group-labs', name: 'Web & Systems Lab Raids', subjectHashes: ['sub-fs-303', 'sub-cn-305'], threshold: 80 }
+      { id: 'group-theory', name: 'Core CS Theory', subjectHashes: ['sub-dsa-301', 'sub-os-302', 'sub-dbms-304'], threshold: 75 },
+      { id: 'group-labs', name: 'Web & Systems Labs', subjectHashes: ['sub-fs-303', 'sub-cn-305'], threshold: 80 }
     ];
   });
   const [newGroupName, setNewGroupName] = useState('');
@@ -144,8 +131,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Global settings - Default Dark for Cyber Game HUD aesthetic
-  const [theme, setTheme] = useState(() => localStorage.getItem('newton_theme') || 'dark');
+  // Target threshold state (default 75%)
   const [targetThreshold, setTargetThreshold] = useState(() => {
     const saved = localStorage.getItem('newton_target_threshold');
     if (saved !== null) {
@@ -171,19 +157,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('newton_target_threshold', targetThreshold.toString());
   }, [targetThreshold]);
-
-  // Apply theme to document element
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.remove('light-theme');
-      root.classList.add('dark-theme');
-    } else {
-      root.classList.remove('dark-theme');
-      root.classList.add('light-theme');
-    }
-    localStorage.setItem('newton_theme', theme);
-  }, [theme]);
 
   // Load Demo Mode data
   const enableDemoMode = () => {
@@ -226,7 +199,7 @@ export default function App() {
       const profRes = await fetch(`${API_BASE}/api/v1/user/me/`, { headers });
       if (!profRes.ok) {
         if (profRes.status === 401 || profRes.status === 403) {
-          throw new Error('Authentication failed (401 Unauthorized). Your token may have expired. Please use the 1-Click Console Scanner or paste a fresh token.');
+          throw new Error('Authentication expired (401 Unauthorized). Please use the 1-Click Console Scanner or paste a fresh token.');
         }
         throw new Error(`Profile request failed: HTTP ${profRes.status}`);
       }
@@ -402,13 +375,11 @@ export default function App() {
   let found = null;
   const directKeys = ['authToken', 'token', 'auth_token', 'user_token', 'access_token', 'accessToken', 'key', 'auth'];
   
-  // 1. Direct key search in localStorage & sessionStorage
   for (const k of directKeys) {
     const val = localStorage.getItem(k) || sessionStorage.getItem(k);
     if (isCandidate(val)) { found = val.trim().replace(/^Bearer\\s+/i, ''); break; }
   }
 
-  // 2. Recursive JSON scan across all storage keys
   if (!found) {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -436,18 +407,17 @@ export default function App() {
     }
   }
 
-  // 3. Check document.cookie
   if (!found) {
     const m = document.cookie.match(/(?:token|authToken|access_token)=([^;]+)/i);
     if (m && isCandidate(m[1])) found = decodeURIComponent(m[1]).replace(/^Bearer\\s+/i, '').trim();
   }
 
   if (found) {
-    console.log('%c[✓] Token found: ' + found, 'color: #00f0ff; font-weight: bold; font-size: 14px;');
+    console.log('%c[✓] Token found: ' + found, 'color: #bf2f1f; font-weight: bold; font-size: 14px;');
     try { if (navigator.clipboard) navigator.clipboard.writeText(found); } catch(e) {}
     window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(found);
   } else {
-    alert('⚠️ Could not find active token in storage. Please open "My Timeline" tab on Newton School LMS and run the command again!');
+    alert('Could not find active token in storage. Please open "My Timeline" tab on Newton School LMS and run the command again!');
   }
 })();`;
 
@@ -462,7 +432,7 @@ export default function App() {
   const saveAndOpen = (tok) => {
     if (!tok || tok.length < 15) return;
     const t = tok.replace(/^Bearer\\s+/i, '').trim();
-    console.log('%c[SUCCESS] Token captured: ' + t, 'color: #00ff9d; font-weight: bold;');
+    console.log('%c[SUCCESS] Token captured: ' + t, 'color: #bf2f1f; font-weight: bold;');
     try { if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(e) {}
     window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(t);
   };
@@ -483,7 +453,7 @@ export default function App() {
     return oldFetch.apply(this, args);
   };
 
-  alert('⚡ Interceptor active! Click "My Timeline" or any course on this page to auto-launch.');
+  alert('Interceptor armed! Click "My Timeline" or any course on this page to auto-launch.');
 })();`;
 
   const copyInterceptor = () => {
@@ -492,10 +462,10 @@ export default function App() {
     setTimeout(() => setCopiedInterceptor(false), 3000);
   };
 
-  // Mathematical Planner calculation engine
+  // Mathematical calculation engine
   const calculateAttendanceStats = useCallback((attended, total, thresholdPercent) => {
     const threshold = thresholdPercent / 100;
-    if (total === 0) return { percent: 0, status: 'safe', bunkable: 0, required: 0, tier: getTierInfo(0, thresholdPercent) };
+    if (total === 0) return { percent: 0, status: 'safe', bunkable: 0, required: 0 };
     
     const percent = (attended / total) * 100;
     
@@ -505,8 +475,7 @@ export default function App() {
         percent,
         status: percent >= thresholdPercent + 5 ? 'safe' : 'warning',
         bunkable: Math.max(0, bunkable),
-        required: 0,
-        tier: getTierInfo(percent, thresholdPercent)
+        required: 0
       };
     } else {
       if (threshold === 1.0) {
@@ -514,8 +483,7 @@ export default function App() {
           percent,
           status: 'danger',
           bunkable: 0,
-          required: Infinity,
-          tier: getTierInfo(percent, thresholdPercent)
+          required: Infinity
         };
       }
       const required = Math.ceil((threshold * total - attended) / (1 - threshold));
@@ -523,8 +491,7 @@ export default function App() {
         percent,
         status: 'danger',
         bunkable: 0,
-        required: Math.max(0, required),
-        tier: getTierInfo(percent, thresholdPercent)
+        required: Math.max(0, required)
       };
     }
   }, []);
@@ -732,59 +699,119 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Top HUD Command Navigation Bar */}
-      <nav className="algora-nav">
-        <div className="brand-wrapper">
-          <div className="brand-badge-logo">
-            <span className="logo-inner">NST</span>
+      {/* Auto-scrolling Ticker (Flat Art Pattern) */}
+      <div className="ticker-container">
+        <div className="ticker-track">
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>DSA & Algorithms</span>
+            <span className="pixel-tag">92.4% SAFE</span>
           </div>
-          <div className="brand-meta">
-            <div className="brand-heading-row">
-              <span className="brand-name">NST // ATTENDANCE HUD</span>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Advanced Web Dev</span>
+            <span className="pixel-tag">88.5% SAFE</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot yellow"></span>
+            <span>Target Threshold: {targetThreshold}%</span>
+            <span className="pixel-tag">MANDATORY</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Operating Systems</span>
+            <span className="pixel-tag">85.0% SAFE</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot red"></span>
+            <span>Database Management</span>
+            <span className="pixel-tag">68.2% LOW</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Newton School LMS Sync</span>
+            <span className="pixel-tag">ACTIVE</span>
+          </div>
+
+          {/* Repeat for continuous 40s seamless loop */}
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>DSA & Algorithms</span>
+            <span className="pixel-tag">92.4% SAFE</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Advanced Web Dev</span>
+            <span className="pixel-tag">88.5% SAFE</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot yellow"></span>
+            <span>Target Threshold: {targetThreshold}%</span>
+            <span className="pixel-tag">MANDATORY</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Operating Systems</span>
+            <span className="pixel-tag">85.0% SAFE</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot red"></span>
+            <span>Database Management</span>
+            <span className="pixel-tag">68.2% LOW</span>
+          </div>
+          <div className="ticker-item">
+            <span className="status-dot green"></span>
+            <span>Newton School LMS Sync</span>
+            <span className="pixel-tag">ACTIVE</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Flat Art Course Header Navigation */}
+      <nav className="art-nav">
+        <div className="nav-brand-group">
+          <div className="brand-icon-box">
+            NST
+          </div>
+          <div className="brand-details">
+            <div className="brand-title-row">
+              <span className="brand-main-title">Newton School Attendance</span>
               {isAuthenticated && (
-                <span className={`status-pill ${isDemoMode ? 'demo' : 'live'}`}>
-                  <span className="pulse-dot"></span>
-                  {isDemoMode ? 'MISSION: SANDBOX' : 'MISSION: LIVE LINK'}
+                <span className={`tag-badge ${isDemoMode ? 'orange' : 'terracotta'}`}>
+                  <span className={`status-dot ${isDemoMode ? 'yellow' : 'green'}`}></span>
+                  {isDemoMode ? 'Sandbox Demo' : 'Live LMS Sync'}
                 </span>
               )}
             </div>
             {profile && (
-              <span className="user-identity">
-                OPERATIVE: {profile.first_name} {profile.last_name} · <span className="mono">[LVL.3 CS WARRIOR]</span> · <span className="mono">@{profile.username || profile.email?.split('@')[0]}</span>
+              <span className="user-tagline">
+                Student: <strong>{profile.first_name} {profile.last_name}</strong> · <span className="font-mono">@{profile.username || profile.email?.split('@')[0]}</span>
               </span>
             )}
           </div>
         </div>
 
-        <div className="nav-actions">
+        <div className="nav-controls">
           {isAuthenticated && (
             <button 
-              className="btn-algora btn-algora-secondary" 
+              className="btn-art btn-art-secondary" 
               onClick={() => isDemoMode ? enableDemoMode() : loadLiveDashboard(token, selectedSemesterHash)}
               disabled={loading}
-              title="Resync telemetry with LMS"
+              title="Resync data from LMS"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              <span>SYNC RADAR</span>
+              <span>Refresh LMS</span>
             </button>
           )}
 
-          <button 
-            className="btn-icon-square" 
-            onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-            title="Toggle Visual Mode (Cyber Dark / Mecha Light)"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-
           {isAuthenticated && (
             <button 
-              className="btn-algora btn-algora-danger" 
+              className="btn-art btn-art-destructive" 
               onClick={handleDisconnect}
-              title="Abort session"
+              title="Disconnect session"
             >
               <LogOut size={14} />
-              <span>ABORT</span>
+              <span>Exit</span>
             </button>
           )}
         </div>
@@ -793,103 +820,100 @@ export default function App() {
       {/* Main View: Connect Gateway vs Authenticated Command Center */}
       {!isAuthenticated ? (
         /* ==========================================================================
-           CONNECT GATEWAY (Cyber Battle Gateway)
+           CONNECT GATEWAY (Flat Art Course Workbook Style)
            ========================================================================== */
         <div>
-          <div className="connect-hero">
-            <div className="connect-hero-tag">
-              <Gamepad2 size={14} />
-              <span>PROTOCOL V3.0 // ACADEMIC COMBAT ENGINE</span>
+          <div className="connect-hero-box">
+            <div className="hero-pill-badge">
+              <BookOpen size={13} style={{ display: 'inline', verticalAlign: 'middle' }} />
+              <span>FLAT ART COURSE // ATTENDANCE WORKBOOK</span>
             </div>
-            <h1 className="connect-hero-title">
-              COMMAND YOUR ATTENDANCE WITH <span className="gradient-text">TACTICAL MASTERY</span>.
+            <h1 className="hero-main-heading">
+              Calculate bunk capacity with <span className="hero-accent-text">mathematical certainty</span>.
             </h1>
-            <p className="connect-hero-desc">
-              Real-time LMS combat telemetry, instant stealth-bunk calculation algorithm, and tactical scenario simulations to keep your academic shield impenetrable.
+            <p className="hero-description">
+              A warm, paper-like attendance workbook for Newton School students. Real-time LMS telemetry, exact bunk quotas, and multi-course simulation.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button className="btn-algora btn-algora-primary" onClick={copySnippet} style={{ padding: '0.75rem 1.6rem', fontSize: '0.86rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+              <button className="btn-art btn-art-primary" onClick={copySnippet} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Zap size={16} />
-                <span>{copiedSnippet ? 'ARMED & COPIED TO CLIPBOARD!' : 'INITIALIZE AUTO SCANNER'}</span>
+                <span>{copiedSnippet ? 'Copied to Clipboard!' : 'Copy 1-Click Console Scanner'}</span>
               </button>
-              <button className="btn-algora btn-algora-secondary" onClick={enableDemoMode} style={{ padding: '0.75rem 1.6rem', fontSize: '0.86rem' }}>
+              <button className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Play size={16} />
-                <span>LAUNCH DEMO SIMULATION</span>
+                <span>Explore Live Demo Sandbox</span>
               </button>
             </div>
           </div>
 
-          <div className="connect-methods-grid">
-            {/* Bento Card 1: 1-Click DevTools Extractor */}
-            <div className="bento-card glow-cyan">
-              <div className="bento-card-header">
-                <div className="bento-title-group">
-                  <span className="eyebrow cyan">01 // AUTO DEVTOOLS SCANNER</span>
-                  <h3 className="bento-title">⚡ Instant Console Ingestion</h3>
+          <div className="connect-grid-layout">
+            {/* Card 1: 1-Click DevTools Console Scanner */}
+            <div className="art-card">
+              <div className="art-card-header">
+                <div>
+                  <span className="tag-badge terracotta" style={{ marginBottom: '0.5rem' }}>01 // RECOMMENDED</span>
+                  <h3 className="art-card-title">⚡ 1-Click Console Scanner</h3>
                 </div>
-                <div className="status-pill demo">1-Click Auto</div>
+                <span className="tag-badge green">Instant</span>
               </div>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Run this automated script inside your browser's DevTools console on the Newton School LMS tab. It scans your active storage keys and automatically redirects you here with your live data:
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                Run this single-line script inside your browser DevTools console on the Newton School LMS tab. It extracts your active session key and automatically opens this dashboard:
               </p>
 
-              <div className="terminal-card">
-                <div className="terminal-header">
-                  <div className="terminal-dots">
-                    <span></span><span></span><span></span>
-                  </div>
-                  <span className="terminal-title">TERMINAL // devtools_scanner.js</span>
+              <div className="workbook-code-box">
+                <div className="workbook-code-header">
+                  <span className="workbook-code-title">JAVASCRIPT // devtools_scanner.js</span>
                   <button 
-                    className="btn-algora btn-algora-primary" 
+                    className="btn-art btn-art-primary" 
                     onClick={copySnippet}
-                    style={{ padding: '0.25rem 0.65rem', fontSize: '0.7rem' }}
+                    style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
                   >
                     {copiedSnippet ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copiedSnippet ? 'ARMED' : 'COPY'}</span>
+                    <span>{copiedSnippet ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
-                <div className="terminal-body">
-                  {universalSnippet.slice(0, 115)}... [CLICK COPY BUTTON TO ARM CODE]
+                <div className="workbook-code-body">
+                  {universalSnippet.slice(0, 120)}... [Click Copy button to grab full code]
                 </div>
               </div>
 
-              <ul className="step-instruction-list">
-                <li className="step-item">
-                  <span className="step-badge">1</span>
-                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+              <ul className="instructions-list">
+                <li className="instruction-step">
+                  <span className="step-num-badge">1</span>
+                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
                 </li>
-                <li className="step-item">
-                  <span className="step-badge">2</span>
+                <li className="instruction-step">
+                  <span className="step-num-badge">2</span>
                   <span>Press <kbd>F12</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd>) &rarr; <strong>Console</strong></span>
                 </li>
-                <li className="step-item">
-                  <span className="step-badge">3</span>
-                  <span>Paste code and press <kbd>Enter</kbd> (Auto-redirects here instantly)</span>
+                <li className="instruction-step">
+                  <span className="step-num-badge">3</span>
+                  <span>Paste code and press <kbd>Enter</kbd></span>
                 </li>
               </ul>
             </div>
 
-            {/* Bento Card 2: Manual Direct Token Input */}
-            <div className="bento-card">
-              <div className="bento-card-header">
-                <div className="bento-title-group">
-                  <span className="eyebrow cyan">02 // DIRECT ACCESS KEY</span>
-                  <h3 className="bento-title">🔑 Direct Bearer Token</h3>
+            {/* Card 2: Direct Bearer Token Input */}
+            <div className="art-card">
+              <div className="art-card-header">
+                <div>
+                  <span className="tag-badge orange" style={{ marginBottom: '0.5rem' }}>02 // MANUAL INPUT</span>
+                  <h3 className="art-card-title">🔑 Direct Bearer Token</h3>
                 </div>
               </div>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-                If you already have your bearer authentication token from request headers or curl, paste it directly:
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.55 }}>
+                If you already copied your bearer authentication key from network request headers or curl, paste it directly:
               </p>
 
               <form onSubmit={handleConnect}>
                 <div style={{ marginBottom: '1rem' }}>
-                  <label className="eyebrow" style={{ display: 'block', marginBottom: '0.4rem' }}>
-                    Bearer Token / JWT Token:
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    Bearer Token / JWT:
                   </label>
                   <textarea 
                     rows={3}
-                    className="algora-select mono"
-                    style={{ width: '100%', resize: 'none', fontSize: '0.8rem', padding: '0.75rem' }}
+                    className="art-select font-mono"
+                    style={{ width: '100%', resize: 'none', fontSize: '0.82rem', padding: '0.75rem', borderRadius: 'var(--radius-nested)' }}
                     placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                     value={inputToken}
                     onChange={(e) => setInputToken(e.target.value)}
@@ -897,444 +921,439 @@ export default function App() {
                 </div>
 
                 {error && (
-                  <div style={{ color: 'var(--accent-danger)', background: 'var(--accent-danger-subtle)', border: '1px solid var(--accent-danger)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', fontSize: '0.82rem', marginBottom: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                    <AlertTriangle size={15} />
+                  <div style={{ color: 'var(--destructive)', backgroundColor: 'var(--destructive-subtle)', border: '1.5px solid hsl(0, 84%, 60%, 0.3)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-button)', fontSize: '0.84rem', marginBottom: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <AlertTriangle size={16} />
                     <span>{error}</span>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="submit" className="btn-algora btn-algora-primary" style={{ flex: 1 }} disabled={loading}>
+                <div style={{ display: 'flex', gap: '0.65rem' }}>
+                  <button type="submit" className="btn-art btn-art-primary" style={{ flex: 1 }} disabled={loading}>
                     {loading ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                    <span>INITIALIZE HUD</span>
+                    <span>Load Attendance</span>
                   </button>
-                  <button type="button" className="btn-algora btn-algora-secondary" onClick={enableDemoMode} title="Try without credentials">
-                    SANDBOX
+                  <button type="button" className="btn-art btn-art-secondary" onClick={enableDemoMode} title="Try without credentials">
+                    Demo Mode
                   </button>
                 </div>
               </form>
 
-              {/* Network Interceptor Hook Secondary Section */}
-              <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+              {/* Card 3: Network Interceptor Hook */}
+              <div style={{ marginTop: '1.6rem', paddingTop: '1.25rem', borderTop: '2px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span className="eyebrow purple">03 // NETWORK INTERCEPTOR</span>
-                  <button className="btn-algora btn-algora-secondary" onClick={copyInterceptor} style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem' }}>
+                  <span className="tag-badge pink">03 // NETWORK INTERCEPTOR</span>
+                  <button className="btn-art btn-art-secondary" onClick={copyInterceptor} style={{ padding: '0.2rem 0.6rem', fontSize: '0.74rem' }}>
                     {copiedInterceptor ? <Check size={11} /> : <Copy size={11} />}
-                    <span>{copiedInterceptor ? 'COPIED' : 'COPY HOOK'}</span>
+                    <span>{copiedInterceptor ? 'Copied' : 'Copy Interceptor'}</span>
                   </button>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Hooks into active XMLHttpRequest/fetch on LMS and captures token on any button click.
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Hooks into active XMLHttpRequest/fetch on LMS and captures token automatically on any button click.
                 </p>
               </div>
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={14} color="var(--accent-safe)" />
-            <span>Zero-Trust Protocol: Your session keys remain strictly stored in local browser memory and never touch remote proxy servers.</span>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.84rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={16} color="var(--primary)" />
+            <span>Zero-Trust Architecture: Your session tokens remain stored strictly in local browser memory and never leave your machine.</span>
           </div>
         </div>
       ) : (
         /* ==========================================================================
-           LIVE LMS COMMAND CENTER (Cyberpunk RPG Battle Station)
+           AUTHENTICATED COMMAND CENTER (Flat Art Course Workbook Dashboard)
            ========================================================================== */
         <div>
           {/* Top Intelligence Toolbar */}
-          <div className="intelligence-bar">
-            <div className="control-cluster">
-              <div className="unit-select-wrapper">
-                <Crosshair size={18} color="var(--accent-cyan)" />
-                <span className="eyebrow" style={{ marginRight: '0.2rem' }}>SECTOR:</span>
-                {semesters.length > 0 ? (
-                  <select 
-                    className="algora-select"
-                    value={selectedSemesterHash}
-                    onChange={(e) => handleSemesterChange(e.target.value)}
-                  >
-                    {semesters.map(s => (
-                      <option key={s.hash} value={s.hash}>
-                        {s.title} {s.isActive ? '· [ACTIVE SECTOR]' : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 700 }}>
-                    {semesterTitle} ({selectedSemesterHash})
-                  </span>
-                )}
-              </div>
+          <div className="toolbar-panel">
+            <div className="toolbar-group">
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Sector / Semester:</span>
+              {semesters.length > 0 ? (
+                <select 
+                  className="art-select"
+                  value={selectedSemesterHash}
+                  onChange={(e) => handleSemesterChange(e.target.value)}
+                >
+                  {semesters.map(s => (
+                    <option key={s.hash} value={s.hash}>
+                      {s.title} {s.isActive ? '· [Current Active]' : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                  {semesterTitle} ({selectedSemesterHash})
+                </span>
+              )}
             </div>
 
-            <div className="control-cluster">
-              <div className="target-slider-panel">
-                <Target size={15} color="var(--accent-cyan)" />
-                <span className="eyebrow">BARRIER:</span>
+            <div className="toolbar-group">
+              <div className="target-slider-box">
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target:</span>
                 <input 
                   type="range"
                   min="50"
                   max="100"
                   value={targetThreshold}
                   onChange={(e) => setTargetThreshold(parseInt(e.target.value))}
-                  className="algora-range-input"
+                  className="art-range-input"
                 />
-                <span className="slider-value-badge">{targetThreshold}%</span>
+                <span className="target-slider-number">{targetThreshold}%</span>
               </div>
 
-              <div className="preset-pills-row">
-                {[
-                  { val: 75, label: 'CASUAL' },
-                  { val: 80, label: 'HARDCORE' },
-                  { val: 85, label: 'ELITE' },
-                  { val: 90, label: 'S-RANK' }
-                ].map(item => (
+              <div className="preset-pills-cluster">
+                {[75, 80, 85, 90].map(val => (
                   <button 
-                    key={item.val}
-                    className={`preset-pill-btn ${targetThreshold === item.val ? 'active' : ''}`}
-                    onClick={() => setTargetThreshold(item.val)}
+                    key={val}
+                    className={`preset-pill-btn ${targetThreshold === val ? 'active' : ''}`}
+                    onClick={() => setTargetThreshold(val)}
                   >
-                    {item.val}% {item.label}
+                    {val}%
                   </button>
                 ))}
               </div>
 
               {healthStats.totalSimulations > 0 && (
                 <button 
-                  className="btn-algora btn-algora-secondary" 
+                  className="btn-art btn-art-secondary" 
                   onClick={resetAllAdjustments}
-                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.76rem' }}
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
                 >
                   <RotateCcw size={13} />
-                  <span>RELOAD DECK ({healthStats.totalSimulations})</span>
+                  <span>Reset Overrides ({healthStats.totalSimulations})</span>
                 </button>
               )}
             </div>
           </div>
 
           {error && (
-            <div style={{ color: 'var(--accent-danger)', background: 'var(--accent-danger-subtle)', border: '1px solid var(--accent-danger)', padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-xs)', fontSize: '0.86rem', marginBottom: '1.5rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <div style={{ color: 'var(--destructive)', backgroundColor: 'var(--destructive-subtle)', border: '2px solid var(--destructive)', padding: '0.85rem 1.25rem', borderRadius: 'var(--radius-button)', fontSize: '0.88rem', marginBottom: '1.75rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
               <AlertTriangle size={18} />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Bento Stats Hero Metrics (HUD Gauges) */}
-          <div className="stats-bento-grid">
-            {/* Metric 1: Overall Percentage / Shield Integrity */}
-            <div className={`bento-card metric-card ${overallStats.status === 'safe' ? 'glow-safe' : overallStats.status === 'danger' ? 'glow-danger' : ''}`}>
-              <div className="metric-top">
-                <span className="eyebrow">SHIELD INTEGRITY</span>
-                <div className={`metric-icon-bubble ${overallStats.status === 'safe' ? '' : overallStats.status === 'warning' ? 'amber' : 'crimson'}`}>
-                  <Shield size={16} />
+          {/* 4 Flat Metric Hero Tiles */}
+          <div className="metrics-grid">
+            {/* Tile 1: Overall Percentage */}
+            <div className="metric-tile">
+              <div className="metric-top-row">
+                <div className="metric-label-group">
+                  <span className={`status-dot ${overallStats.status === 'safe' ? 'green' : overallStats.status === 'warning' ? 'yellow' : 'red'}`}></span>
+                  <span>AGGREGATE RATE</span>
                 </div>
-              </div>
-              <div className="metric-value-row">
-                <span className="metric-huge-number">{overallStats.percent.toFixed(1)}%</span>
-                <span className={`metric-delta-tag ${overallStats.percent >= targetThreshold ? 'safe' : 'danger'}`}>
-                  {overallStats.tier.tier}
+                <span className={`tag-badge ${overallStats.percent >= targetThreshold ? 'green' : 'red'}`}>
+                  {overallStats.percent >= targetThreshold ? 'COMPLIANT' : 'LOW ATTENDANCE'}
                 </span>
               </div>
-              <span className="metric-subtext">
+              <div className="metric-number-row">
+                <span className="metric-large-val">{overallStats.percent.toFixed(1)}%</span>
+              </div>
+              <span className="metric-note">
                 {overallStats.percent >= targetThreshold 
-                  ? `Shield integrity holds above minimum barrier of ${targetThreshold}%`
-                  : `WARNING: Shield breached below mandated ${targetThreshold}% threshold`
+                  ? `Safely above minimum target of ${targetThreshold}%`
+                  : `Currently below mandated ${targetThreshold}% threshold`
                 }
               </span>
             </div>
 
-            {/* Metric 2: Net Action Verdict / Stealth Ammo */}
-            <div className={`bento-card metric-card ${overallStats.percent >= targetThreshold ? 'glow-safe' : 'glow-danger'}`}>
-              <div className="metric-top">
-                <span className="eyebrow">STEALTH BUNK AMMO</span>
-                <div className={`metric-icon-bubble ${overallStats.percent >= targetThreshold ? '' : 'crimson'}`}>
-                  {overallStats.percent >= targetThreshold ? <Flame size={16} /> : <AlertTriangle size={16} />}
+            {/* Tile 2: Net Action Verdict */}
+            <div className="metric-tile">
+              <div className="metric-top-row">
+                <div className="metric-label-group">
+                  <span className={`status-dot ${overallStats.percent >= targetThreshold ? 'green' : 'red'}`}></span>
+                  <span>ACTION VERDICT</span>
                 </div>
+                {overallStats.percent >= targetThreshold ? <Flame size={18} color="var(--primary)" /> : <AlertTriangle size={18} color="var(--destructive)" />}
               </div>
-              <div className="metric-value-row">
-                <span className="metric-huge-number" style={{ color: overallStats.percent >= targetThreshold ? 'var(--accent-safe)' : 'var(--accent-danger)' }}>
+              <div className="metric-number-row">
+                <span className="metric-large-val" style={{ color: overallStats.percent >= targetThreshold ? 'var(--status-green)' : 'var(--destructive)' }}>
                   {overallStats.percent >= targetThreshold 
-                    ? `Bunk ${overallStats.bunkable}x` 
-                    : `Grind ${overallStats.required}x`
+                    ? `Bunk ${overallStats.bunkable}` 
+                    : `Attend ${overallStats.required}`
                   }
                 </span>
               </div>
-              <span className="metric-subtext">
+              <span className="metric-note">
                 {overallStats.percent >= targetThreshold 
-                  ? `Stealth charges available before shield drops below ${targetThreshold}%`
-                  : `Consecutive boss raids required to restore barrier integrity`
+                  ? `Lectures can be safely skipped while staying ≥ ${targetThreshold}%`
+                  : `Consecutive classes required to recover target`
                 }
               </span>
             </div>
 
-            {/* Metric 3: Total Conducted vs Attended */}
-            <div className="bento-card metric-card">
-              <div className="metric-top">
-                <span className="eyebrow">QUEST CLEARS</span>
-                <div className="metric-icon-bubble cyan">
-                  <Calculator size={16} />
+            {/* Tile 3: Attendance Ratio */}
+            <div className="metric-tile">
+              <div className="metric-top-row">
+                <div className="metric-label-group">
+                  <span className="status-dot gray"></span>
+                  <span>TOTAL RATIO</span>
                 </div>
+                <Calculator size={18} color="var(--text-muted)" />
               </div>
-              <div className="metric-value-row">
-                <span className="metric-huge-number mono">{overallStats.attended} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
+              <div className="metric-number-row">
+                <span className="metric-large-val font-mono">{overallStats.attended} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
               </div>
-              <span className="metric-subtext">
-                Total lectures attended across all enrolled sectors
+              <span className="metric-note">
+                Total lectures attended across all enrolled subjects
               </span>
             </div>
 
-            {/* Metric 4: Health Breakdown */}
-            <div className="bento-card metric-card">
-              <div className="metric-top">
-                <span className="eyebrow">SQUAD READINESS</span>
-                <div className="metric-icon-bubble amber">
-                  <Trophy size={16} />
+            {/* Tile 4: Course Health Breakdown */}
+            <div className="metric-tile">
+              <div className="metric-top-row">
+                <div className="metric-label-group">
+                  <span className="status-dot yellow"></span>
+                  <span>COURSE HEALTH</span>
                 </div>
+                <Layers size={18} color="var(--tag-gold)" />
               </div>
-              <div className="metric-value-row">
-                <span className="metric-huge-number mono">{healthStats.safeCount} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
-                <span className="metric-delta-tag safe">READY</span>
+              <div className="metric-number-row">
+                <span className="metric-large-val font-mono">{healthStats.safeCount} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
+                <span className="tag-badge green">SAFE</span>
               </div>
-              <span className="metric-subtext">
+              <span className="metric-note">
                 {healthStats.dangerCount === 0 
-                  ? 'All courses in optimal operational standing' 
-                  : `${healthStats.dangerCount} course(s) require immediate XP grinding`
+                  ? 'All enrolled courses currently in good standing' 
+                  : `${healthStats.dangerCount} course(s) require immediate attendance boost`
                 }
               </span>
             </div>
           </div>
 
-          {/* Quick Batch Simulator Drawer / Banner (Combat Deck) */}
-          <div className="batch-sim-banner">
-            <div className="batch-sim-info">
-              <Swords size={20} color="var(--accent-cyan)" />
+          {/* Quick Batch Simulator Strip */}
+          <div className="batch-simulator-card">
+            <div className="batch-info-cluster">
+              <Sparkles size={20} color="var(--primary)" />
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.1rem' }}>
-                  <span className="eyebrow cyan">COMBAT DECK // TACTICAL SIMULATION</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.15rem' }}>
+                  <span className="tag-badge terracotta">WHAT-IF ENGINE // PROJECTIONS</span>
                   {healthStats.totalSimulations > 0 && (
-                    <span className="status-pill demo" style={{ fontSize: '0.64rem', padding: '0.1rem 0.45rem' }}>
+                    <span className="tag-badge orange">
                       {healthStats.totalSimulations} ACTIVE OVERRIDE{healthStats.totalSimulations > 1 ? 'S' : ''}
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '0.86rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                  Execute universal timetable combat scenarios to stress-test your academic shield:
+                <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                  Simulate universal schedule scenarios to test your attendance:
                 </span>
               </div>
             </div>
 
-            <div className="batch-sim-actions">
-              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 1)} style={{ fontSize: '0.74rem', padding: '0.35rem 0.65rem' }}>
-                <Plus size={13} color="var(--accent-safe)" />
-                <span>+1 RAID DAY (ALL PRESENT)</span>
+            <div className="batch-actions-cluster">
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('attend_all', 1)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <Plus size={13} color="var(--status-green)" />
+                <span>+1 All (Day Present)</span>
               </button>
-              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 1)} style={{ fontSize: '0.74rem', padding: '0.35rem 0.65rem' }}>
-                <Minus size={13} color="var(--accent-danger)" />
-                <span>+1 STEALTH DAY (BUNK ALL)</span>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('miss_all', 1)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <Minus size={13} color="var(--destructive)" />
+                <span>+1 Miss All (Bunk Day)</span>
               </button>
-              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 3)} style={{ fontSize: '0.74rem', padding: '0.35rem 0.65rem' }}>
-                <span>+3 RAID STREAK (FULL WEEK)</span>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('attend_all', 3)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <span>+3 Full Week Present</span>
               </button>
-              <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.74rem', padding: '0.35rem 0.65rem' }}>
-                <span>FULL WEEK STEALTH BUNK</span>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <span>Miss Full Week</span>
               </button>
               <button 
-                className={`btn-algora ${healthStats.totalSimulations > 0 ? 'btn-algora-danger' : 'btn-algora-secondary'}`}
+                className={`btn-art ${healthStats.totalSimulations > 0 ? 'btn-art-destructive' : 'btn-art-secondary'}`}
                 onClick={resetAllAdjustments}
                 disabled={healthStats.totalSimulations === 0}
-                style={{ fontSize: '0.74rem', padding: '0.35rem 0.75rem' }}
-                title="Reset all tactical overrides back to live telemetry"
+                style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}
+                title="Reset all simulated adjustments back to portal values"
               >
                 <RotateCcw size={13} />
-                <span>RESET COMBAT DECK {healthStats.totalSimulations > 0 ? `(${healthStats.totalSimulations})` : ''}</span>
+                <span>Reset All {healthStats.totalSimulations > 0 ? `(${healthStats.totalSimulations})` : ''}</span>
               </button>
             </div>
           </div>
 
           {/* Search, Filter & View Controls */}
-          <div className="search-filter-row">
-            <div className="search-input-box">
-              <Search size={16} color="var(--accent-cyan)" />
+          <div className="filter-search-row">
+            <div className="search-field-box">
+              <Search size={16} color="var(--text-muted)" />
               <input 
                 type="text"
-                placeholder="Search active quest by name or code..."
+                placeholder="Search course name or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            <div className="filter-pills-group">
+            <div className="filter-tabs-cluster">
               <button 
-                className={`filter-tab-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                className={`filter-tab ${statusFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('all')}
               >
-                <span>ALL QUESTS</span>
-                <span className="filter-count">{processedSubjects.length}</span>
+                <span>All Courses</span>
+                <span className="filter-num">{processedSubjects.length}</span>
               </button>
               <button 
-                className={`filter-tab-btn ${statusFilter === 'safe' ? 'active' : ''}`}
+                className={`filter-tab ${statusFilter === 'safe' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('safe')}
               >
-                <span style={{ color: 'var(--accent-safe)' }}>●</span>
-                <span>SHIELDED</span>
-                <span className="filter-count">{processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length}</span>
+                <span className="status-dot green"></span>
+                <span>Safe</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length}</span>
               </button>
               <button 
-                className={`filter-tab-btn ${statusFilter === 'warning' ? 'active' : ''}`}
+                className={`filter-tab ${statusFilter === 'warning' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('warning')}
               >
-                <span style={{ color: 'var(--accent-warning)' }}>●</span>
-                <span>CAUTION</span>
-                <span className="filter-count">{processedSubjects.filter(s => s.status === 'warning').length}</span>
+                <span className="status-dot yellow"></span>
+                <span>Caution</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'warning').length}</span>
               </button>
               <button 
-                className={`filter-tab-btn ${statusFilter === 'danger' ? 'active' : ''}`}
+                className={`filter-tab ${statusFilter === 'danger' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('danger')}
               >
-                <span style={{ color: 'var(--accent-danger)' }}>●</span>
-                <span>CRITICAL</span>
-                <span className="filter-count">{processedSubjects.filter(s => s.status === 'danger').length}</span>
+                <span className="status-dot red"></span>
+                <span>Low Attendance</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'danger').length}</span>
               </button>
               {healthStats.totalSimulations > 0 && (
                 <button 
-                  className={`filter-tab-btn ${statusFilter === 'simulated' ? 'active' : ''}`}
+                  className={`filter-tab ${statusFilter === 'simulated' ? 'active' : ''}`}
                   onClick={() => setStatusFilter('simulated')}
                 >
-                  <Sparkles size={12} color="var(--accent-cyan)" />
-                  <span>SIMULATED</span>
-                  <span className="filter-count">{processedSubjects.filter(s => s.hasAdjustments).length}</span>
+                  <Sparkles size={12} color="var(--primary)" />
+                  <span>Simulated</span>
+                  <span className="filter-num">{processedSubjects.filter(s => s.hasAdjustments).length}</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Main Dashboard Grid */}
-          <div className="main-layout-grid">
-            {/* Left Column: Subjects Bento Stream (Active Quests) */}
+          {/* Main Content Layout Grid */}
+          <div className="main-course-grid">
+            {/* Left Column: Subject Cards Stream */}
             <div>
               {loading ? (
-                <div className="subjects-stream">
-                  <div className="skeleton-box"></div>
-                  <div className="skeleton-box"></div>
-                  <div className="skeleton-box"></div>
-                  <div className="skeleton-box"></div>
+                <div className="courses-stream">
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
                 </div>
               ) : filteredSubjects.length === 0 ? (
-                <div className="bento-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem', color: 'var(--text-muted)' }}>
+                <div className="art-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem', color: 'var(--text-muted)' }}>
                   <Search size={32} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.4rem', fontFamily: 'var(--font-hud)' }}>NO ACTIVE QUESTS MATCH CRITERIA</h3>
-                  <p style={{ fontSize: '0.85rem' }}>Refine your radar search query or clear your status filter.</p>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '0.4rem', fontFamily: 'var(--font-display)' }}>No Courses Match Search</h3>
+                  <p style={{ fontSize: '0.88rem' }}>Try refining your query or reset the status filter.</p>
                 </div>
               ) : (
-                <div className="subjects-stream">
+                <div className="courses-stream">
                   {filteredSubjects.map(subject => (
-                    <div key={subject.hash} className={`subject-bento-tile ${subject.status}`}>
-                      {/* Tile Header & Stats */}
+                    <div key={subject.hash} className="course-card">
+                      {/* Course Card Header */}
                       <div>
-                        <div className="tile-top-row">
+                        <div className="course-top-meta">
                           <div>
-                            <h4 className="subject-title-text">{subject.name}</h4>
-                            <span className="subject-code-tag">#{subject.shortName || subject.hash} · [{subject.tier.tier}]</span>
+                            <h4 className="course-name-heading">{subject.name}</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
+                              <span className="tag-badge terracotta">#{subject.shortName || subject.hash}</span>
+                              <span className={`status-dot ${subject.status === 'safe' ? 'green' : subject.status === 'warning' ? 'yellow' : 'red'}`}></span>
+                            </div>
                           </div>
 
-                          <div className="tile-rate-badge">
-                            <div className={`rate-percentage-number ${subject.status}`}>
+                          <div className="course-rate-col">
+                            <div className="rate-big-pct" style={{ color: subject.status === 'safe' ? 'var(--status-green)' : subject.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
                               {subject.percent.toFixed(1)}%
                             </div>
-                            <div className="rate-raw-fraction">
-                              {subject.attended} / {subject.total} raids
+                            <div className="rate-fraction-text">
+                              {subject.attended} / {subject.total} classes
                             </div>
                           </div>
                         </div>
 
-                        {/* Segmented Cyber Health Bar with Target Marker */}
-                        <div style={{ marginTop: '0.85rem' }}>
-                          <div className="progress-track-wrapper">
-                            <div className="progress-track">
-                              <div 
-                                className={`progress-fill ${subject.status}`} 
-                                style={{ width: `${Math.min(100, Math.max(0, subject.percent))}%` }}
-                              ></div>
-                              <div 
-                                className="progress-target-marker" 
-                                style={{ left: `${targetThreshold}%` }}
-                                title={`Mandated Threshold: ${targetThreshold}%`}
-                              ></div>
-                            </div>
+                        {/* Flat Progress Bar with Target Marker */}
+                        <div style={{ marginTop: '1rem' }}>
+                          <div className="flat-progress-rail">
+                            <div 
+                              className={`flat-progress-fill ${subject.status}`} 
+                              style={{ width: `${Math.min(100, Math.max(0, subject.percent))}%` }}
+                            ></div>
+                            <div 
+                              className="progress-notch" 
+                              style={{ left: `${targetThreshold}%` }}
+                              title={`Target: ${targetThreshold}%`}
+                            ></div>
                           </div>
                         </div>
                       </div>
 
                       {/* Action Verdict Banner */}
-                      <div className={`action-verdict-banner ${subject.status}`}>
+                      <div className={`action-verdict-box ${subject.status}`}>
                         {subject.total === 0 ? (
                           <>
-                            <Info size={15} />
-                            <span>NO RAIDS CONDUCTED YET.</span>
+                            <Info size={16} />
+                            <span>No lectures conducted yet.</span>
                           </>
                         ) : subject.percent >= targetThreshold ? (
                           <>
-                            <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+                            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
                             <span>
-                              STEALTH READY: Safe to bunk <strong>{subject.bunkable}</strong> more {subject.bunkable === 1 ? 'raid' : 'raids'} above {targetThreshold}%.
+                              Safe to bunk <strong>{subject.bunkable}</strong> more {subject.bunkable === 1 ? 'class' : 'classes'} while staying &ge; {targetThreshold}%.
                             </span>
                           </>
                         ) : (
                           <>
-                            <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
                             <span>
-                              SHIELD BREACHED: Must clear <strong>{subject.required}</strong> consecutive {subject.required === 1 ? 'boss raid' : 'boss raids'} for {targetThreshold}%.
+                              Must attend <strong>{subject.required}</strong> consecutive {subject.required === 1 ? 'class' : 'classes'} to reach {targetThreshold}%.
                             </span>
                           </>
                         )}
                       </div>
 
                       {/* Interactive Tactile Stepper Simulator */}
-                      <div className="simulator-box">
-                        <div className="simulator-box-header">
-                          <span className="eyebrow" style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <Swords size={11} color="var(--accent-cyan)" />
-                            TACTICAL OVERRIDE
+                      <div className="stepper-simulator-panel">
+                        <div className="stepper-header-row">
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Sliders size={12} color="var(--primary)" />
+                            WHAT-IF ADJUSTMENTS
                           </span>
                           {subject.hasAdjustments && (
                             <button 
                               onClick={() => resetAdjustment(subject.hash)}
-                              className="btn-algora btn-algora-danger"
-                              style={{ padding: '0.15rem 0.45rem', fontSize: '0.68rem', height: 'auto', borderRadius: '2px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                              title="Reset simulation for this sector"
+                              className="btn-art btn-art-destructive"
+                              style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', height: 'auto', borderRadius: 'var(--radius-pill)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              title="Reset simulation for this course"
                             >
                               <RotateCcw size={10} />
-                              <span>RESET</span>
+                              <span>Reset</span>
                             </button>
                           )}
                         </div>
 
-                        <div className="stepper-row">
+                        <div className="stepper-grid-units">
                           {/* Attend Stepper */}
-                          <div className="stepper-unit">
-                            <span className="stepper-label">RAID (+1)</span>
-                            <div className="stepper-controls">
+                          <div className="stepper-unit-box">
+                            <span className="stepper-unit-label">ATTEND (+1)</span>
+                            <div className="stepper-pill-controls">
                               <button 
-                                className="stepper-btn"
+                                className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'attend', -1)}
-                                title="Subtract simulated raid attend"
+                                title="Subtract simulated attend"
                               >
                                 -
                               </button>
-                              <span className={`stepper-number ${subject.adjAttended > 0 ? 'active-sim' : ''}`}>
+                              <span className={`stepper-count-num ${subject.adjAttended > 0 ? 'active-plus' : ''}`}>
                                 {subject.adjAttended >= 0 ? `+${subject.adjAttended}` : subject.adjAttended}
                               </span>
                               <button 
-                                className="stepper-btn"
+                                className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'attend', 1)}
-                                title="Add simulated raid attend"
+                                title="Add simulated attend"
                               >
                                 +
                               </button>
@@ -1342,23 +1361,23 @@ export default function App() {
                           </div>
 
                           {/* Miss Stepper */}
-                          <div className="stepper-unit">
-                            <span className="stepper-label">BUNK (+1)</span>
-                            <div className="stepper-controls">
+                          <div className="stepper-unit-box">
+                            <span className="stepper-unit-label">MISS (+1)</span>
+                            <div className="stepper-pill-controls">
                               <button 
-                                className="stepper-btn"
+                                className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'miss', -1)}
-                                title="Subtract simulated stealth skip"
+                                title="Subtract simulated miss"
                               >
                                 -
                               </button>
-                              <span className={`stepper-number ${subject.adjTotal - subject.adjAttended > 0 ? 'active-miss' : ''}`}>
+                              <span className={`stepper-count-num ${subject.adjTotal - subject.adjAttended > 0 ? 'active-minus' : ''}`}>
                                 +{subject.adjTotal - subject.adjAttended}
                               </span>
                               <button 
-                                className="stepper-btn"
+                                className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'miss', 1)}
-                                title="Add simulated stealth skip"
+                                title="Add simulated miss"
                               >
                                 +
                               </button>
@@ -1367,8 +1386,8 @@ export default function App() {
                         </div>
 
                         {subject.hasAdjustments && (
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>
-                            LMS: {subject.rawAttended}/{subject.rawTotal} &rarr; PROJECTED: {subject.attended}/{subject.total}
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>
+                            LMS: {subject.rawAttended}/{subject.rawTotal} &rarr; Projected: {subject.attended}/{subject.total}
                           </div>
                         )}
                       </div>
@@ -1378,43 +1397,43 @@ export default function App() {
               )}
             </div>
 
-            {/* Right Column: Custom Groups (Guilds) & Combat Math */}
-            <div className="sidebar-stack">
+            {/* Right Column: Custom Subject Groups & Math Proofs */}
+            <div className="sidebar-column">
               
-              {/* Subject Groups Bento Box (Guilds / Clans) */}
-              <div className="bento-card">
-                <div className="bento-card-header">
-                  <div className="bento-title-group">
-                    <span className="eyebrow purple">GUILDS & CLANS</span>
-                    <h3 className="bento-title">Tactical Clusters</h3>
+              {/* Subject Groups Card */}
+              <div className="art-card">
+                <div className="art-card-header">
+                  <div>
+                    <span className="tag-badge pink" style={{ marginBottom: '0.4rem' }}>AGGREGATIONS</span>
+                    <h3 className="art-card-title">Subject Groups</h3>
                   </div>
                   <button 
-                    className="btn-algora btn-algora-secondary"
-                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem' }}
+                    className="btn-art btn-art-secondary"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
                     onClick={() => setShowCreateGroup(prev => !prev)}
                   >
                     <FolderPlus size={13} />
-                    <span>NEW CLAN</span>
+                    <span>New Group</span>
                   </button>
                 </div>
 
-                {/* Create Group Form Inline Drawer */}
+                {/* Create Group Form Drawer */}
                 {showCreateGroup && (
-                  <form onSubmit={handleCreateGroup} style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-xs)', border: '1px dashed var(--border-medium)', marginBottom: '1.25rem' }}>
-                    <span className="eyebrow" style={{ marginBottom: '0.4rem', display: 'block' }}>Create Clan Bucket:</span>
+                  <form onSubmit={handleCreateGroup} style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', marginBottom: '1.25rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Group Title:</span>
                     <input 
                       type="text"
-                      placeholder="Clan Name (e.g. Lab Raids, Core Theory)"
-                      className="algora-select"
+                      placeholder="e.g. Lab Practicals, Theory Bucket"
+                      className="art-select"
                       style={{ width: '100%', marginBottom: '0.75rem' }}
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
                     />
 
-                    <span className="eyebrow" style={{ marginBottom: '0.4rem', display: 'block' }}>Assign Quests:</span>
-                    <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', padding: '0.5rem', background: 'var(--bg-canvas)', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Select Courses:</span>
+                    <div style={{ maxHeight: '140px', overflowY: 'auto', border: '2px solid var(--border-color)', borderRadius: 'var(--radius-button)', padding: '0.5rem', backgroundColor: 'var(--bg-surface)', marginBottom: '0.85rem' }}>
                       {processedSubjects.map(sub => (
-                        <label key={sub.hash} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '0.25rem 0', cursor: 'pointer' }}>
+                        <label key={sub.hash} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-primary)', padding: '0.3rem 0', cursor: 'pointer' }}>
                           <input 
                             type="checkbox"
                             checked={newGroupSubjects.includes(sub.hash)}
@@ -1425,9 +1444,9 @@ export default function App() {
                       ))}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button type="submit" className="btn-algora btn-algora-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.76rem' }}>FORM CLAN</button>
-                      <button type="button" className="btn-algora btn-algora-secondary" style={{ padding: '0.4rem', fontSize: '0.76rem' }} onClick={() => setShowCreateGroup(false)}>CANCEL</button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button type="submit" className="btn-art btn-art-primary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}>Create Group</button>
+                      <button type="button" className="btn-art btn-art-secondary" style={{ padding: '0.45rem', fontSize: '0.8rem' }} onClick={() => setShowCreateGroup(false)}>Cancel</button>
                     </div>
                   </form>
                 )}
@@ -1435,61 +1454,61 @@ export default function App() {
                 {/* Groups List */}
                 <div>
                   {groups.length === 0 ? (
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
-                      No custom clans formed. Guilds let you aggregate combined battle attendance across combinations of quests.
+                    <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                      No custom groups created. Groups let you aggregate combined attendance across combinations of subjects.
                     </p>
                   ) : (
                     groups.map(group => {
                       const stats = getGroupStats(group);
                       return (
-                        <div key={group.id} className="group-tile">
-                          <div className="group-tile-header">
+                        <div key={group.id} className="group-item-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                             <div>
-                              <div className="group-title-text">{group.name}</div>
-                              <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)' }}>
-                                {group.subjectHashes.length} QUESTS CONSOLIDATED
+                              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>{group.name}</div>
+                              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                {group.subjectHashes.length} course(s) aggregated
                               </span>
                             </div>
                             <button 
                               onClick={() => handleDeleteGroup(group.id)}
-                              style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', opacity: 0.7 }}
-                              title="Disband Clan"
+                              style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', opacity: 0.7 }}
+                              title="Delete Group"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0.5rem 0' }}>
-                            <span className={`rate-percentage-number ${stats.status}`} style={{ fontSize: '1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0.6rem 0' }}>
+                            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.35rem', color: stats.status === 'safe' ? 'var(--status-green)' : stats.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
                               {stats.percent.toFixed(1)}%
                             </span>
-                            <span className="group-stats-fraction">{stats.attended} / {stats.total} raids</span>
+                            <span className="font-mono" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{stats.attended} / {stats.total} classes</span>
                           </div>
 
-                          {/* Group Threshold Slider */}
-                          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                            <span className="eyebrow" style={{ fontSize: '0.68rem' }}>BARRIER: {stats.threshold}%</span>
+                          {/* Group Target Slider */}
+                          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>Target: {stats.threshold}%</span>
                             <input 
                               type="range"
                               min="50"
                               max="100"
                               value={stats.threshold}
                               onChange={(e) => handleUpdateGroupThreshold(group.id, e.target.value)}
-                              className="algora-range-input"
+                              className="art-range-input"
                               style={{ width: '80px' }}
                             />
                           </div>
 
-                          <div className={`action-verdict-banner ${stats.status}`} style={{ marginTop: '0.6rem', padding: '0.45rem 0.65rem', fontSize: '0.76rem' }}>
+                          <div className={`action-verdict-box ${stats.status}`} style={{ marginTop: '0.6rem', padding: '0.5rem 0.75rem', fontSize: '0.78rem' }}>
                             {stats.percent >= stats.threshold ? (
                               <>
-                                <CheckCircle2 size={13} />
-                                <span>Can bunk <strong>{stats.bunkable}</strong> ammo tokens</span>
+                                <CheckCircle2 size={14} />
+                                <span>Safe to bunk <strong>{stats.bunkable}</strong> classes</span>
                               </>
                             ) : (
                               <>
-                                <AlertTriangle size={13} />
-                                <span>Requires <strong>{stats.required}</strong> consecutive raids</span>
+                                <AlertTriangle size={14} />
+                                <span>Must attend <strong>{stats.required}</strong> consecutive classes</span>
                               </>
                             )}
                           </div>
@@ -1500,31 +1519,31 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Combat Math Algorithms & Proofs */}
-              <div className="bento-card">
-                <div className="bento-card-header" style={{ marginBottom: '0.75rem' }}>
-                  <div className="bento-title-group">
-                    <span className="eyebrow cyan">COMBAT ALGORITHMS</span>
-                    <h4 className="bento-title" style={{ fontSize: '0.98rem' }}>Tactical Proofs</h4>
+              {/* Mathematical Proofs Workbook Card */}
+              <div className="art-card">
+                <div className="art-card-header" style={{ marginBottom: '0.75rem' }}>
+                  <div>
+                    <span className="tag-badge gold" style={{ marginBottom: '0.4rem' }}>ALGORITHMS</span>
+                    <h4 className="art-card-title" style={{ fontSize: '1.05rem' }}>Formulas & Proofs</h4>
                   </div>
-                  <Code2 size={18} color="var(--accent-cyan)" />
+                  <Code2 size={18} color="var(--primary)" />
                 </div>
 
-                <div className="formula-box">
-                  <div style={{ marginBottom: '0.6rem' }}>
-                    <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-hud)', fontSize: '0.78rem' }}>STEALTH BUNK CAPACITY:</strong>
-                    <code className="formula-code">
+                <div className="formula-card-content">
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.84rem' }}>Bunkable Class Capacity:</strong>
+                    <code className="formula-code-line">
                       ⌊(Attended - T × Total) / T⌋
                     </code>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Where T = Target % / 100.</span>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Where T = Target % / 100.</span>
                   </div>
 
                   <div>
-                    <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-hud)', fontSize: '0.78rem' }}>SHIELD RECOVERY QUOTA:</strong>
-                    <code className="formula-code">
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.84rem' }}>Recovery Requirement:</strong>
+                    <code className="formula-code-line">
                       ⌈(T × Total - Attended) / (1 - T)⌉
                     </code>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Consecutive raids required to restore compliance.</span>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Consecutive lectures needed to restore threshold.</span>
                   </div>
                 </div>
               </div>
