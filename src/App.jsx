@@ -134,8 +134,17 @@ export default function App() {
   });
 
   // Global settings
-  const [theme, setTheme] = useState(() => localStorage.getItem('newton_theme') || 'dark');
-  const [targetThreshold, setTargetThreshold] = useState(75);
+  const [theme, setTheme] = useState(() => localStorage.getItem('newton_theme') || 'light');
+  const [targetThreshold, setTargetThreshold] = useState(() => {
+    const saved = localStorage.getItem('newton_target_threshold');
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 100) {
+        return parsed;
+      }
+    }
+    return 75;
+  });
 
   // Save adjustments to localStorage
   useEffect(() => {
@@ -146,6 +155,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('newton_attendance_groups', JSON.stringify(groups));
   }, [groups]);
+
+  // Save target threshold to localStorage
+  useEffect(() => {
+    localStorage.setItem('newton_target_threshold', targetThreshold.toString());
+  }, [targetThreshold]);
 
   // Apply theme to document element
   useEffect(() => {
@@ -773,13 +787,13 @@ export default function App() {
 
           <div className="connect-methods-grid">
             {/* Bento Card 1: 1-Click DevTools Extractor */}
-            <div className="bento-card glow-mint">
+            <div className="bento-card glow-cinnabar">
               <div className="bento-card-header">
                 <div className="bento-title-group">
-                  <span className="eyebrow mint">01 // RECOMMENDED METHOD</span>
+                  <span className="eyebrow cinnabar">01 // RECOMMENDED METHOD</span>
                   <h3 className="bento-title">⚡ 1-Click Console Scanner</h3>
                 </div>
-                <div className="status-pill live">Instant Sync</div>
+                <div className="status-pill demo">Instant Sync</div>
               </div>
               <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 Run this automated script inside your browser's DevTools console on the Newton School LMS tab. It extracts your active session and redirects here securely:
@@ -808,7 +822,7 @@ export default function App() {
               <ul className="step-instruction-list">
                 <li className="step-item">
                   <span className="step-badge">1</span>
-                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-mint)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cinnabar)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
                 </li>
                 <li className="step-item">
                   <span className="step-badge">2</span>
@@ -883,20 +897,20 @@ export default function App() {
           </div>
 
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={14} color="var(--accent-mint)" />
+            <ShieldCheck size={14} color="var(--accent-safe)" />
             <span>Zero-Trust Architecture: Your bearer tokens remain strictly stored in local browser memory and never touch remote proxy servers.</span>
           </div>
         </div>
       ) : (
         /* ==========================================================================
-           LIVE LMS COMMAND CENTER (Algora Developer Aesthetic)
+           LIVE LMS COMMAND CENTER (Opaline Developer Aesthetic)
            ========================================================================== */
         <div>
           {/* Top Intelligence Toolbar */}
           <div className="intelligence-bar">
             <div className="control-cluster">
               <div className="unit-select-wrapper">
-                <GraduationCap size={18} color="var(--accent-mint)" />
+                <GraduationCap size={18} color="var(--accent-cinnabar)" />
                 <span className="eyebrow" style={{ marginRight: '0.2rem' }}>Unit:</span>
                 {semesters.length > 0 ? (
                   <select 
@@ -967,7 +981,7 @@ export default function App() {
           {/* Bento Stats Hero Metrics */}
           <div className="stats-bento-grid">
             {/* Metric 1: Overall Percentage */}
-            <div className={`bento-card metric-card ${overallStats.status === 'safe' ? 'glow-mint' : overallStats.status === 'danger' ? 'glow-crimson' : ''}`}>
+            <div className={`bento-card metric-card ${overallStats.status === 'safe' ? 'glow-safe' : overallStats.status === 'danger' ? 'glow-danger' : ''}`}>
               <div className="metric-top">
                 <span className="eyebrow">AGGREGATE RATE</span>
                 <div className={`metric-icon-bubble ${overallStats.status === 'safe' ? '' : overallStats.status === 'warning' ? 'amber' : 'crimson'}`}>
@@ -992,7 +1006,7 @@ export default function App() {
             </div>
 
             {/* Metric 2: Net Action Verdict */}
-            <div className={`bento-card metric-card ${overallStats.percent >= targetThreshold ? 'glow-mint' : 'glow-crimson'}`}>
+            <div className={`bento-card metric-card ${overallStats.percent >= targetThreshold ? 'glow-safe' : 'glow-danger'}`}>
               <div className="metric-top">
                 <span className="eyebrow">NET VERDICT</span>
                 <div className={`metric-icon-bubble ${overallStats.percent >= targetThreshold ? '' : 'crimson'}`}>
@@ -1000,7 +1014,7 @@ export default function App() {
                 </div>
               </div>
               <div className="metric-value-row">
-                <span className="metric-huge-number" style={{ color: overallStats.percent >= targetThreshold ? 'var(--accent-mint)' : 'var(--accent-crimson)' }}>
+                <span className="metric-huge-number" style={{ color: overallStats.percent >= targetThreshold ? 'var(--accent-safe)' : 'var(--accent-danger)' }}>
                   {overallStats.percent >= targetThreshold 
                     ? `Bunk ${overallStats.bunkable}` 
                     : `Attend ${overallStats.required}`
@@ -1055,12 +1069,12 @@ export default function App() {
           {/* Quick Batch Simulator Drawer / Banner */}
           <div className="batch-sim-banner">
             <div className="batch-sim-info">
-              <Sparkles size={20} color="var(--accent-mint)" />
+              <Sparkles size={20} color="var(--accent-cinnabar)" />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.1rem' }}>
-                  <span className="eyebrow mint">WHAT-IF ENGINE // PROJECTIONS</span>
+                  <span className="eyebrow cinnabar">WHAT-IF ENGINE // PROJECTIONS</span>
                   {healthStats.totalSimulations > 0 && (
-                    <span className="status-pill live" style={{ fontSize: '0.64rem', padding: '0.1rem 0.45rem' }}>
+                    <span className="status-pill demo" style={{ fontSize: '0.64rem', padding: '0.1rem 0.45rem' }}>
                       {healthStats.totalSimulations} active override{healthStats.totalSimulations > 1 ? 's' : ''}
                     </span>
                   )}
@@ -1073,11 +1087,11 @@ export default function App() {
 
             <div className="batch-sim-actions">
               <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 1)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
-                <Plus size={13} color="var(--accent-mint)" />
+                <Plus size={13} color="var(--accent-safe)" />
                 <span>+1 All (Day Present)</span>
               </button>
               <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('miss_all', 1)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
-                <Minus size={13} color="var(--accent-crimson)" />
+                <Minus size={13} color="var(--accent-danger)" />
                 <span>+1 Miss All (Bunk Day)</span>
               </button>
               <button className="btn-algora btn-algora-secondary" onClick={() => applyBatchSimulation('attend_all', 3)} style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}>
@@ -1131,7 +1145,7 @@ export default function App() {
                 className={`filter-tab-btn ${statusFilter === 'safe' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('safe')}
               >
-                <span style={{ color: 'var(--accent-mint)' }}>●</span>
+                <span style={{ color: 'var(--accent-safe)' }}>●</span>
                 <span>Safe</span>
                 <span className="filter-count">{processedSubjects.filter(s => s.status === 'safe').length}</span>
               </button>
@@ -1139,7 +1153,7 @@ export default function App() {
                 className={`filter-tab-btn ${statusFilter === 'warning' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('warning')}
               >
-                <span style={{ color: 'var(--accent-amber)' }}>●</span>
+                <span style={{ color: 'var(--accent-warning)' }}>●</span>
                 <span>Caution</span>
                 <span className="filter-count">{processedSubjects.filter(s => s.status === 'warning').length}</span>
               </button>
@@ -1147,7 +1161,7 @@ export default function App() {
                 className={`filter-tab-btn ${statusFilter === 'danger' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('danger')}
               >
-                <span style={{ color: 'var(--accent-crimson)' }}>●</span>
+                <span style={{ color: 'var(--accent-danger)' }}>●</span>
                 <span>Critical</span>
                 <span className="filter-count">{processedSubjects.filter(s => s.status === 'danger').length}</span>
               </button>
@@ -1249,7 +1263,7 @@ export default function App() {
                       <div className="simulator-box">
                         <div className="simulator-box-header">
                           <span className="eyebrow" style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <Sparkles size={11} color="var(--accent-mint)" />
+                            <Sparkles size={11} color="var(--accent-cinnabar)" />
                             WHAT-IF STEPPER
                           </span>
                           {subject.hasAdjustments && (
