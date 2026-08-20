@@ -83,10 +83,10 @@ const DEMO_PROFILE = {
 
 // Calculate gamified rank and status tier
 const getTierInfo = (percent, threshold = 75) => {
-  if (percent >= 90) return { tier: 'S-RANK', label: 'GOD-MODE', color: 'var(--accent-cyan)', bg: 'rgba(0, 240, 255, 0.12)', border: '#00f0ff' };
-  if (percent >= 80) return { tier: 'A-RANK', label: 'OPTIMAL SHIELD', color: 'var(--accent-safe)', bg: 'rgba(0, 255, 157, 0.12)', border: '#00ff9d' };
-  if (percent >= threshold) return { tier: 'B-RANK', label: 'SURVIVAL ZONE', color: 'var(--accent-warning)', bg: 'rgba(255, 230, 0, 0.12)', border: '#ffe600' };
-  return { tier: 'CRITICAL', label: 'SHIELD BREACHED', color: 'var(--accent-danger)', bg: 'rgba(255, 0, 85, 0.14)', border: '#ff0055' };
+  if (percent >= 90) return { tier: 'S-RANK', label: 'GOD-MODE', color: 'var(--accent-cyan)' };
+  if (percent >= 80) return { tier: 'A-RANK', label: 'OPTIMAL SHIELD', color: 'var(--accent-safe)' };
+  if (percent >= threshold) return { tier: 'B-RANK', label: 'SURVIVAL ZONE', color: 'var(--accent-warning)' };
+  return { tier: 'CRITICAL', label: 'SHIELD BREACHED', color: 'var(--accent-danger)' };
 };
 
 export default function App() {
@@ -144,7 +144,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Global settings - Default Dark for ultimate Cyber Game HUD aesthetic
+  // Global settings - Default Dark for Cyber Game HUD aesthetic
   const [theme, setTheme] = useState(() => localStorage.getItem('newton_theme') || 'dark');
   const [targetThreshold, setTargetThreshold] = useState(() => {
     const saved = localStorage.getItem('newton_target_threshold');
@@ -209,125 +209,140 @@ export default function App() {
     setError('');
   };
 
-  // API Call helper
-  const fetchNewtonAPI = useCallback(async (endpoint, bearerToken) => {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${bearerToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("AUTHENTICATION PROTOCOL FAILED: Token expired or invalid.");
-    }
-    if (!res.ok) {
-      throw new Error(`COMM LINK ERROR: Server responded with status ${res.status}`);
-    }
-    return await res.json();
-  }, []);
-
-  // Fetch complete student dashboard
-  const loadLiveDashboard = useCallback(async (authToken, targetSemHash = null) => {
+  // Full Live LMS Dashboard loader using official Newton School API hierarchy
+  const loadLiveDashboard = useCallback(async (authToken, semHash = null) => {
+    if (!authToken) return;
     setLoading(true);
     setError('');
+    const cleanToken = authToken.replace(/^Bearer\s+/i, '').trim();
+
+    const headers = {
+      'Authorization': `Bearer ${cleanToken}`,
+      'Accept': 'application/json'
+    };
+
     try {
-      // 1. Fetch User Profile
-      const profileData = await fetchNewtonAPI('/api/v1/user/profile/', authToken);
-      setProfile(profileData);
-
-      // 2. Fetch User Courses / Learning Units
-      const coursesData = await fetchNewtonAPI('/api/v1/user/learning-units/', authToken);
-      let enrolledSemesters = [];
-      if (Array.isArray(coursesData)) {
-        enrolledSemesters = coursesData;
-      } else if (coursesData && Array.isArray(coursesData.results)) {
-        enrolledSemesters = coursesData.results;
-      } else if (coursesData && Array.isArray(coursesData.learningUnits)) {
-        enrolledSemesters = coursesData.learningUnits;
-      }
-
-      setSemesters(enrolledSemesters);
-
-      // Determine active semester
-      let currentSem = null;
-      if (targetSemHash) {
-        currentSem = enrolledSemesters.find(s => s.hash === targetSemHash);
-      }
-      if (!currentSem) {
-        currentSem = enrolledSemesters.find(s => s.isActive) || enrolledSemesters[0];
-      }
-
-      if (currentSem) {
-        setSelectedSemesterHash(currentSem.hash);
-        setSemesterTitle(currentSem.title || `Unit ${currentSem.hash}`);
-
-        // 3. Fetch overall semester performance
-        try {
-          const semPerf = await fetchNewtonAPI(`/api/v1/user/learning-units/${currentSem.hash}/performance/`, authToken);
-          if (semPerf && semPerf.total_lectures !== undefined) {
-            setOverallPerf(semPerf);
-          }
-        } catch (e) {
-          console.warn("Could not fetch overall semester performance:", e);
+      // 1. Fetch User Profile (/api/v1/user/me/)
+      const profRes = await fetch(`${API_BASE}/api/v1/user/me/`, { headers });
+      if (!profRes.ok) {
+        if (profRes.status === 401 || profRes.status === 403) {
+          throw new Error('Authentication failed (401 Unauthorized). Your token may have expired. Please use the 1-Click Console Scanner or paste a fresh token.');
         }
+        throw new Error(`Profile request failed: HTTP ${profRes.status}`);
+      }
+      const profData = await profRes.json();
+      setProfile(profData);
 
-        // 4. Fetch subject list & their individual performance
-        const units = currentSem.learningUnits || [];
-        const subjectsWithPerf = await Promise.all(units.map(async (unit) => {
-          let rawAttended = 0;
-          let rawTotal = 0;
-          try {
-            const perf = await fetchNewtonAPI(`/api/v1/user/learning-units/${unit.hash}/performance/`, authToken);
-            if (perf) {
-              rawAttended = perf.total_lectures_attended || 0;
-              rawTotal = perf.total_lectures || 0;
+      // 2. Fetch Applied Courses Hierarchy (/api/v2/course/all/applied/?pagination=false&completed=false)
+      const appliedRes = await fetch(`${API_BASE}/api/v2/course/all/applied/?pagination=false&completed=false`, { headers });
+      if (!appliedRes.ok) throw new Error('Failed to retrieve applied courses list.');
+      const appliedData = await appliedRes.json();
+
+      // Extract all semester admin units
+      const extractedSemesters = [];
+      let activeSemHash = semHash || selectedSemesterHash || 'u4fvf1rm9v2e';
+      let foundActiveUnits = [];
+
+      if (Array.isArray(appliedData)) {
+        for (const entry of appliedData) {
+          const adminUnits = entry.children_courses?.admin_unit_courses || [];
+          for (const unit of adminUnits) {
+            extractedSemesters.push({
+              hash: unit.hash,
+              title: unit.title || unit.short_display_name || unit.hash,
+              shortName: unit.short_display_name,
+              isActive: unit.is_active_admin_unit_course,
+              learningUnits: unit.learning_unit_courses || []
+            });
+
+            if (unit.hash === activeSemHash) {
+              setSemesterTitle(unit.title || unit.short_display_name);
+              foundActiveUnits = unit.learning_unit_courses || [];
             }
-          } catch (err) {
-            console.warn(`Performance fetch failed for unit ${unit.hash}:`, err);
           }
+        }
+      }
 
+      if (extractedSemesters.length > 0 && foundActiveUnits.length === 0) {
+        // Fallback to first semester or active semester if hash not matched
+        const activeOne = extractedSemesters.find(s => s.isActive) || extractedSemesters[0];
+        activeSemHash = activeOne.hash;
+        setSemesterTitle(activeOne.title);
+        foundActiveUnits = activeOne.learningUnits || [];
+      }
+
+      setSemesters(extractedSemesters);
+      setSelectedSemesterHash(activeSemHash);
+
+      // 3. Fetch Overall Semester Performance (/api/v2/course/h/{hash}/self_performance/)
+      try {
+        const semPerfRes = await fetch(`${API_BASE}/api/v2/course/h/${activeSemHash}/self_performance/`, { headers });
+        if (semPerfRes.ok) {
+          const semPerf = await semPerfRes.json();
+          setOverallPerf(semPerf);
+        }
+      } catch (err) {
+        console.warn("Overall performance fetch error:", err);
+      }
+
+      // 4. Fetch Each Individual Subject's Performance
+      const subjectsWithAttendance = await Promise.all(
+        foundActiveUnits.map(async (unit, index) => {
+          const subHash = unit.hash;
+          try {
+            const pRes = await fetch(`${API_BASE}/api/v2/course/h/${subHash}/self_performance/`, { headers });
+            if (pRes.ok) {
+              const pData = await pRes.json();
+              return {
+                id: unit.id || index,
+                hash: subHash,
+                name: unit.title || unit.short_display_name || `Subject ${index + 1}`,
+                shortName: unit.short_display_name,
+                rawAttended: pData.total_lectures_attended ?? 0,
+                rawTotal: pData.total_lectures ?? 0
+              };
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch performance for ${subHash}:`, e);
+          }
           return {
-            id: unit.id,
-            hash: unit.hash,
-            name: unit.title,
+            id: unit.id || index,
+            hash: subHash,
+            name: unit.title || unit.short_display_name || `Subject ${index + 1}`,
             shortName: unit.short_display_name,
-            rawAttended,
-            rawTotal
+            rawAttended: 0,
+            rawTotal: 0
           };
-        }));
+        })
+      );
 
-        setSubjectsData(subjectsWithPerf);
-      }
+      setSubjectsData(subjectsWithAttendance);
+
     } catch (err) {
-      console.error("Dashboard sync failure:", err);
-      setError(err.message || "Failed to establish uplink with LMS. Please verify token.");
-      // Clear token if invalid
-      if (err.message.includes("AUTHENTICATION PROTOCOL FAILED")) {
-        localStorage.removeItem('newton_bearer_token');
-        setToken('');
-      }
+      console.error(err);
+      setError(err.message || 'An error occurred while communicating with the LMS API.');
     } finally {
       setLoading(false);
     }
-  }, [fetchNewtonAPI]);
+  }, [selectedSemesterHash]);
 
-  // Initial token loader
+  // When active token exists, fetch live profile and attendance
   useEffect(() => {
-    if (token) {
-      loadLiveDashboard(token);
+    if (token && token !== 'null' && token !== 'undefined') {
+      setIsDemoMode(false);
+      loadLiveDashboard(token, selectedSemesterHash);
     }
-  }, [token, loadLiveDashboard]);
+  }, [token, loadLiveDashboard, selectedSemesterHash]);
 
   // Handle switching semesters
   const handleSemesterChange = (newSemHash) => {
+    setSelectedSemesterHash(newSemHash);
     if (isDemoMode) {
-      const sem = DEMO_SEMESTERS.find(s => s.hash === newSemHash);
-      if (sem) {
-        setSelectedSemesterHash(sem.hash);
-        setSemesterTitle(sem.title);
-        setOverallPerf(DEMO_PERFORMANCES[sem.hash] || { total_lectures: 0, total_lectures_attended: 0 });
-        const demoSubs = sem.learningUnits.map(unit => {
+      const selected = DEMO_SEMESTERS.find(s => s.hash === newSemHash);
+      if (selected) {
+        setSemesterTitle(selected.title);
+        setOverallPerf(DEMO_PERFORMANCES[newSemHash] || { total_lectures: 0, total_lectures_attended: 0 });
+        const demoSubs = selected.learningUnits.map(unit => {
           const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
           return {
             id: unit.id,
@@ -340,22 +355,19 @@ export default function App() {
         });
         setSubjectsData(demoSubs);
       }
-      return;
-    }
-
-    if (token) {
+    } else if (token) {
       loadLiveDashboard(token, newSemHash);
     }
   };
 
   // Connect form submission handler
   const handleConnect = (e) => {
-    e.preventDefault();
-    if (!inputToken.trim()) {
-      setError("Please paste a valid JWT or Bearer token.");
+    if (e) e.preventDefault();
+    const clean = inputToken.replace(/^Bearer\s+/i, '').trim();
+    if (!clean || clean === 'null' || clean === 'undefined') {
+      setError('Please paste a valid Bearer token.');
       return;
     }
-    const clean = inputToken.replace(/^Bearer\s+/i, '').trim();
     localStorage.setItem('newton_bearer_token', clean);
     setIsDemoMode(false);
     setToken(clean);
@@ -365,176 +377,267 @@ export default function App() {
   const handleDisconnect = () => {
     localStorage.removeItem('newton_bearer_token');
     setToken('');
+    setInputToken('');
+    setIsDemoMode(false);
     setProfile(null);
     setSemesters([]);
     setSubjectsData([]);
-    setIsDemoMode(false);
+    setAdjustments({});
+    setError('');
   };
 
-  // 1-Click Auto-Extractor Console Snippet
-  const universalSnippet = `(()=>{try{const t=localStorage.getItem('token')||sessionStorage.getItem('token')||document.cookie.match(/token=([^;]+)/)?.[1];if(!t)return alert('⚠️ No active session found. Please ensure you are logged into my.newtonschool.co');const d='${window.location.origin}${window.location.pathname}?token='+encodeURIComponent(t);console.log('⚡ Session extracted. Redirecting to HUD...');window.location.href=d;}catch(e){alert('Extractor Error: '+e.message)}})();`;
+  // Dynamic origin URL for the extractor redirect
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+
+  // Robust Universal 1-Click Extractor Snippet for DevTools Console
+  const universalSnippet = `(() => {
+  const isCandidate = (str) => {
+    if (typeof str !== 'string') return false;
+    const s = str.trim().replace(/^Bearer\\s+/i, '');
+    if (s.length < 20 || s.length > 500) return false;
+    if (s.startsWith('http') || s.includes('<') || s.includes(' ') || s.includes('{')) return false;
+    return /^[a-zA-Z0-9_.-]+$/.test(s);
+  };
+
+  let found = null;
+  const directKeys = ['authToken', 'token', 'auth_token', 'user_token', 'access_token', 'accessToken', 'key', 'auth'];
+  
+  // 1. Direct key search in localStorage & sessionStorage
+  for (const k of directKeys) {
+    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
+    if (isCandidate(val)) { found = val.trim().replace(/^Bearer\\s+/i, ''); break; }
+  }
+
+  // 2. Recursive JSON scan across all storage keys
+  if (!found) {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const raw = localStorage.getItem(k);
+      if (isCandidate(raw)) { found = raw.trim().replace(/^Bearer\\s+/i, ''); break; }
+      try {
+        const obj = JSON.parse(raw);
+        const queue = [obj];
+        while (queue.length > 0) {
+          const curr = queue.shift();
+          if (curr && typeof curr === 'object') {
+            for (const subKey of Object.keys(curr)) {
+              const subVal = curr[subKey];
+              if (isCandidate(subVal) && /token|auth|key/i.test(subKey)) {
+                found = subVal.trim().replace(/^Bearer\\s+/i, '');
+                break;
+              }
+              if (typeof subVal === 'object' && subVal !== null) queue.push(subVal);
+            }
+          }
+          if (found) break;
+        }
+      } catch (e) {}
+      if (found) break;
+    }
+  }
+
+  // 3. Check document.cookie
+  if (!found) {
+    const m = document.cookie.match(/(?:token|authToken|access_token)=([^;]+)/i);
+    if (m && isCandidate(m[1])) found = decodeURIComponent(m[1]).replace(/^Bearer\\s+/i, '').trim();
+  }
+
+  if (found) {
+    console.log('%c[✓] Token found: ' + found, 'color: #00f0ff; font-weight: bold; font-size: 14px;');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(found); } catch(e) {}
+    window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(found);
+  } else {
+    alert('⚠️ Could not find active token in storage. Please open "My Timeline" tab on Newton School LMS and run the command again!');
+  }
+})();`;
 
   const copySnippet = () => {
-    navigator.clipboard.writeText(universalSnippet);
+    navigator.clipboard.writeText(universalSnippet.replace(/\n\s+/g, ' '));
     setCopiedSnippet(true);
-    setTimeout(() => setCopiedSnippet(false), 2500);
+    setTimeout(() => setCopiedSnippet(false), 3000);
   };
 
-  // Network Request Interceptor Hook
+  // Robust Network Request Interceptor Hook
   const interceptorSnippet = `(() => {
-  const origOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function() {
-    this.addEventListener('load', function() {
-      const auth = this.getResponseHeader('Authorization') || this.getResponseHeader('authorization');
-      if (auth) console.log('🔑 Captured Token:', auth);
-    });
-    origOpen.apply(this, arguments);
+  const saveAndOpen = (tok) => {
+    if (!tok || tok.length < 15) return;
+    const t = tok.replace(/^Bearer\\s+/i, '').trim();
+    console.log('%c[SUCCESS] Token captured: ' + t, 'color: #00ff9d; font-weight: bold;');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(e) {}
+    window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(t);
   };
-  console.log('🚀 Network interceptor installed. Perform any action in LMS to capture token.');
+
+  const oldSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function(k, v) {
+    if (k && k.toLowerCase() === 'authorization' && v) saveAndOpen(v);
+    return oldSetHeader.apply(this, arguments);
+  };
+
+  const oldFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const h = args[1] && args[1].headers;
+    if (h) {
+      const auth = typeof h.get === 'function' ? h.get('Authorization') : (h.Authorization || h.authorization);
+      if (auth) saveAndOpen(auth);
+    }
+    return oldFetch.apply(this, args);
+  };
+
+  alert('⚡ Interceptor active! Click "My Timeline" or any course on this page to auto-launch.');
 })();`;
 
   const copyInterceptor = () => {
-    navigator.clipboard.writeText(interceptorSnippet);
+    navigator.clipboard.writeText(interceptorSnippet.replace(/\n\s+/g, ' '));
     setCopiedInterceptor(true);
-    setTimeout(() => setCopiedInterceptor(false), 2500);
+    setTimeout(() => setCopiedInterceptor(false), 3000);
   };
 
   // Mathematical Planner calculation engine
-  const calculateAttendanceStats = useCallback((attended, total, threshold) => {
-    if (total === 0) {
+  const calculateAttendanceStats = useCallback((attended, total, thresholdPercent) => {
+    const threshold = thresholdPercent / 100;
+    if (total === 0) return { percent: 0, status: 'safe', bunkable: 0, required: 0, tier: getTierInfo(0, thresholdPercent) };
+    
+    const percent = (attended / total) * 100;
+    
+    if (percent >= thresholdPercent) {
+      const bunkable = Math.floor((attended - threshold * total) / threshold);
       return {
-        percent: 0,
-        bunkable: 0,
+        percent,
+        status: percent >= thresholdPercent + 5 ? 'safe' : 'warning',
+        bunkable: Math.max(0, bunkable),
         required: 0,
-        status: 'safe',
-        tier: getTierInfo(0, threshold)
+        tier: getTierInfo(percent, thresholdPercent)
+      };
+    } else {
+      if (threshold === 1.0) {
+        return {
+          percent,
+          status: 'danger',
+          bunkable: 0,
+          required: Infinity,
+          tier: getTierInfo(percent, thresholdPercent)
+        };
+      }
+      const required = Math.ceil((threshold * total - attended) / (1 - threshold));
+      return {
+        percent,
+        status: 'danger',
+        bunkable: 0,
+        required: Math.max(0, required),
+        tier: getTierInfo(percent, thresholdPercent)
       };
     }
-
-    const currentPercent = (attended / total) * 100;
-    const targetFraction = threshold / 100;
-
-    let bunkable = 0;
-    let required = 0;
-
-    if (currentPercent >= threshold) {
-      bunkable = Math.floor((attended - targetFraction * total) / targetFraction);
-      bunkable = Math.max(0, bunkable);
-    } else {
-      const denom = 1 - targetFraction;
-      if (denom > 0) {
-        required = Math.ceil((targetFraction * total - attended) / denom);
-        required = Math.max(0, required);
-      }
-    }
-
-    let status = 'safe';
-    if (currentPercent < threshold) {
-      status = 'danger';
-    } else if (currentPercent < threshold + 3) {
-      status = 'warning';
-    }
-
-    return {
-      percent: currentPercent,
-      bunkable,
-      required,
-      status,
-      tier: getTierInfo(currentPercent, threshold)
-    };
   }, []);
 
   // Modify simulated attendance for a specific subject
-  const adjustSubjectAttendance = (subjectHash, type, delta) => {
+  const adjustSubjectAttendance = (subjectHash, type, value) => {
     setAdjustments(prev => {
-      const current = prev[subjectHash] || { attended: 0, total: 0 };
-      let newAttended = current.attended;
-      let newTotal = current.total;
+      const current = prev[subjectHash] || { adjAttended: 0, adjTotal: 0 };
+      let newAtt = current.adjAttended;
+      let newTot = current.adjTotal;
 
       if (type === 'attend') {
-        newAttended += delta;
-        newTotal += delta;
+        newAtt += value;
+        newTot += value;
       } else if (type === 'miss') {
-        newTotal += delta;
+        newTot += value;
       }
 
-      if (newTotal < 0) newTotal = 0;
-      if (newAttended < 0) newAttended = 0;
-      if (newAttended > newTotal) newAttended = newTotal;
+      const subject = subjectsData.find(c => c.hash === subjectHash) || { rawAttended: 0, rawTotal: 0 };
+      const finalAttended = subject.rawAttended + newAtt;
+      const finalTotal = subject.rawTotal + newTot;
 
-      if (newAttended === 0 && newTotal === 0) {
-        const copy = { ...prev };
-        delete copy[subjectHash];
-        return copy;
+      if (finalAttended < 0 || finalTotal < 0 || finalAttended > finalTotal) {
+        return prev;
       }
 
       return {
         ...prev,
-        [subjectHash]: { attended: newAttended, total: newTotal }
+        [subjectHash]: { adjAttended: newAtt, adjTotal: newTot }
       };
     });
   };
 
-  // Reset adjustments for a specific subject
-  const resetAdjustment = (subjectHash) => {
+  // Batch Simulators (e.g. simulate missing 1 full day across all subjects)
+  const applyBatchSimulation = (type, amount = 1) => {
     setAdjustments(prev => {
-      const copy = { ...prev };
-      delete copy[subjectHash];
-      return copy;
+      const next = { ...prev };
+      processedSubjects.forEach(sub => {
+        const current = next[sub.hash] || { adjAttended: 0, adjTotal: 0 };
+        let newAtt = current.adjAttended;
+        let newTot = current.adjTotal;
+
+        if (type === 'attend_all') {
+          newAtt += amount;
+          newTot += amount;
+        } else if (type === 'miss_all') {
+          newTot += amount;
+        }
+
+        const original = subjectsData.find(c => c.hash === sub.hash) || { rawAttended: 0, rawTotal: 0 };
+        if (original.rawAttended + newAtt >= 0 && original.rawTotal + newTot >= 0) {
+          next[sub.hash] = { adjAttended: newAtt, adjTotal: newTot };
+        }
+      });
+      return next;
     });
   };
 
-  // Reset all adjustments
+  const resetAdjustment = (subjectHash) => {
+    setAdjustments(prev => {
+      const next = { ...prev };
+      delete next[subjectHash];
+      return next;
+    });
+  };
+
   const resetAllAdjustments = () => {
     setAdjustments({});
   };
 
-  // Batch simulation helper (e.g. attend all +1 or miss all +1)
-  const applyBatchSimulation = (type, count = 1) => {
-    subjectsData.forEach(sub => {
-      adjustSubjectAttendance(sub.hash, type === 'attend_all' ? 'attend' : 'miss', count);
-    });
-  };
-
   // Processed subjects list with live simulations and math applied
   const processedSubjects = useMemo(() => {
-    return subjectsData.map(subject => {
-      const adj = adjustments[subject.hash] || { attended: 0, total: 0 };
-      const attended = subject.rawAttended + adj.attended;
-      const total = subject.rawTotal + adj.total;
+    return subjectsData.map(sub => {
+      const hash = sub.hash;
+      const adj = adjustments[hash] || { adjAttended: 0, adjTotal: 0 };
+      
+      const attended = Math.max(0, sub.rawAttended + adj.adjAttended);
+      const total = Math.max(0, sub.rawTotal + adj.adjTotal);
+      
       const stats = calculateAttendanceStats(attended, total, targetThreshold);
 
       return {
-        ...subject,
+        ...sub,
         attended,
         total,
-        adjAttended: adj.attended,
-        adjTotal: adj.total,
-        hasAdjustments: adj.attended !== 0 || adj.total !== 0,
+        adjAttended: adj.adjAttended,
+        adjTotal: adj.adjTotal,
+        hasAdjustments: adj.adjAttended !== 0 || adj.adjTotal !== 0,
         ...stats
       };
     });
   }, [subjectsData, adjustments, targetThreshold, calculateAttendanceStats]);
 
-  // Overall aggregate stats calculation
+  // Overall aggregate summary metrics
   const overallStats = useMemo(() => {
-    let totalAttended = 0;
-    let totalConducted = 0;
-
-    if (processedSubjects.length > 0) {
-      processedSubjects.forEach(s => {
-        totalAttended += s.attended;
-        totalConducted += s.total;
-      });
-    } else {
-      totalAttended = overallPerf.total_lectures_attended || 0;
-      totalConducted = overallPerf.total_lectures || 0;
+    if (processedSubjects.length === 0) {
+      const att = overallPerf.total_lectures_attended ?? 0;
+      const tot = overallPerf.total_lectures ?? 0;
+      return { attended: att, total: tot, ...calculateAttendanceStats(att, tot, targetThreshold) };
     }
-
-    const stats = calculateAttendanceStats(totalAttended, totalConducted, targetThreshold);
+    
+    let sumAttended = 0;
+    let sumTotal = 0;
+    
+    processedSubjects.forEach(s => {
+      sumAttended += s.attended;
+      sumTotal += s.total;
+    });
+    
+    const stats = calculateAttendanceStats(sumAttended, sumTotal, targetThreshold);
     return {
-      attended: totalAttended,
-      total: totalConducted,
+      attended: sumAttended,
+      total: sumTotal,
       ...stats
     };
   }, [processedSubjects, overallPerf, targetThreshold, calculateAttendanceStats]);
@@ -549,7 +652,8 @@ export default function App() {
 
       if (!matchesSearch) return false;
 
-      if (statusFilter === 'safe') return sub.status === 'safe';
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'safe') return sub.status === 'safe' || sub.status === 'warning';
       if (statusFilter === 'warning') return sub.status === 'warning';
       if (statusFilter === 'danger') return sub.status === 'danger';
       if (statusFilter === 'simulated') return sub.hasAdjustments;
@@ -560,22 +664,14 @@ export default function App() {
   // Health summary metrics
   const healthStats = useMemo(() => {
     const total = processedSubjects.length;
-    const safeCount = processedSubjects.filter(s => s.status === 'safe').length;
-    const warningCount = processedSubjects.filter(s => s.status === 'warning').length;
+    const safeCount = processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length;
     const dangerCount = processedSubjects.filter(s => s.status === 'danger').length;
-    const simulatedCount = processedSubjects.filter(s => s.hasAdjustments).length;
+    const totalSimulations = Object.values(adjustments).reduce((acc, curr) => acc + Math.abs(curr.adjAttended || 0) + Math.abs(curr.adjTotal || 0), 0);
 
-    return {
-      total,
-      safeCount,
-      warningCount,
-      dangerCount,
-      simulatedCount,
-      totalSimulations: Object.keys(adjustments).length
-    };
+    return { total, safeCount, dangerCount, totalSimulations };
   }, [processedSubjects, adjustments]);
 
-  // Subject Group Management Handlers
+  // Custom Groups Management
   const handleCreateGroup = (e) => {
     e.preventDefault();
     if (!newGroupName.trim() || newGroupSubjects.length === 0) return;
@@ -714,7 +810,7 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button className="btn-algora btn-algora-primary" onClick={copySnippet} style={{ padding: '0.75rem 1.6rem', fontSize: '0.86rem' }}>
                 <Zap size={16} />
-                <span>{copiedSnippet ? 'EXECUTED CONSOLE COMMAND!' : 'INITIALIZE AUTO SCANNER'}</span>
+                <span>{copiedSnippet ? 'ARMED & COPIED TO CLIPBOARD!' : 'INITIALIZE AUTO SCANNER'}</span>
               </button>
               <button className="btn-algora btn-algora-secondary" onClick={enableDemoMode} style={{ padding: '0.75rem 1.6rem', fontSize: '0.86rem' }}>
                 <Play size={16} />
@@ -731,10 +827,10 @@ export default function App() {
                   <span className="eyebrow cyan">01 // AUTO DEVTOOLS SCANNER</span>
                   <h3 className="bento-title">⚡ Instant Console Ingestion</h3>
                 </div>
-                <div className="status-pill demo">Fast Pass</div>
+                <div className="status-pill demo">1-Click Auto</div>
               </div>
               <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Run this automated script inside your browser's DevTools console on the Newton School LMS tab. It extracts your active operative key and redirects securely:
+                Run this automated script inside your browser's DevTools console on the Newton School LMS tab. It scans your active storage keys and automatically redirects you here with your live data:
               </p>
 
               <div className="terminal-card">
@@ -753,14 +849,14 @@ export default function App() {
                   </button>
                 </div>
                 <div className="terminal-body">
-                  {universalSnippet.slice(0, 110)}... [CLICK COPY TO ARM CODE]
+                  {universalSnippet.slice(0, 115)}... [CLICK COPY BUTTON TO ARM CODE]
                 </div>
               </div>
 
               <ul className="step-instruction-list">
                 <li className="step-item">
                   <span className="step-badge">1</span>
-                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
                 </li>
                 <li className="step-item">
                   <span className="step-badge">2</span>
@@ -768,7 +864,7 @@ export default function App() {
                 </li>
                 <li className="step-item">
                   <span className="step-badge">3</span>
-                  <span>Paste code and press <kbd>Enter</kbd></span>
+                  <span>Paste code and press <kbd>Enter</kbd> (Auto-redirects here instantly)</span>
                 </li>
               </ul>
             </div>
@@ -1088,7 +1184,7 @@ export default function App() {
               >
                 <span style={{ color: 'var(--accent-safe)' }}>●</span>
                 <span>SHIELDED</span>
-                <span className="filter-count">{processedSubjects.filter(s => s.status === 'safe').length}</span>
+                <span className="filter-count">{processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length}</span>
               </button>
               <button 
                 className={`filter-tab-btn ${statusFilter === 'warning' ? 'active' : ''}`}
