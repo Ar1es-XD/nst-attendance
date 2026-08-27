@@ -714,8 +714,8 @@ export default function App() {
           </div>
           <div className="ticker-item">
             <span className="status-dot yellow"></span>
-            <span>Current Target Threshold:</span>
-            <span className="pixel-tag">Needed = {(targetThreshold - overallStats.percent).toFixed(1)}% </span>
+            <span>Current Target Threshold :</span>
+            <span className="pixel-tag">Need {(targetThreshold - overallStats.percent).toFixed(1)}% </span>
           </div>
           <div className="ticker-item">
             <span className="status-dot green"></span>
