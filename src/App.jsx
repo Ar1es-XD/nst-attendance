@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Analytics } from "@vercel/analytics/next"
 import {
   Zap,
   Copy,
