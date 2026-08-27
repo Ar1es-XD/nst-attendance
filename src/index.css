@@ -482,7 +482,7 @@ body {
 
 @media (min-width: 860px) {
   .connect-grid-layout {
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 

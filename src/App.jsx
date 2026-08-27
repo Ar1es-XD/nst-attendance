@@ -98,7 +98,6 @@ export default function App() {
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [copiedInterceptor, setCopiedInterceptor] = useState(false);
 
   // Profile, Course, and Performance states
@@ -199,7 +198,7 @@ export default function App() {
       const profRes = await fetch(`${API_BASE}/api/v1/user/me/`, { headers });
       if (!profRes.ok) {
         if (profRes.status === 401 || profRes.status === 403) {
-          throw new Error('Authentication expired (401 Unauthorized). Please use the 1-Click Console Scanner or paste a fresh token.');
+          throw new Error('Authentication expired (401 Unauthorized). Please paste a fresh Bearer token or use the Network Interceptor.');
         }
         throw new Error(`Profile request failed: HTTP ${profRes.status}`);
       }
@@ -361,71 +360,6 @@ export default function App() {
 
   // Dynamic origin URL for the extractor redirect
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-
-  // Robust Universal 1-Click Extractor Snippet for DevTools Console
-  const universalSnippet = `(() => {
-  const isCandidate = (str) => {
-    if (typeof str !== 'string') return false;
-    const s = str.trim().replace(/^Bearer\\s+/i, '');
-    if (s.length < 20 || s.length > 500) return false;
-    if (s.startsWith('http') || s.includes('<') || s.includes(' ') || s.includes('{')) return false;
-    return /^[a-zA-Z0-9_.-]+$/.test(s);
-  };
-
-  let found = null;
-  const directKeys = ['authToken', 'token', 'auth_token', 'user_token', 'access_token', 'accessToken', 'key', 'auth'];
-  
-  for (const k of directKeys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (isCandidate(val)) { found = val.trim().replace(/^Bearer\\s+/i, ''); break; }
-  }
-
-  if (!found) {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      const raw = localStorage.getItem(k);
-      if (isCandidate(raw)) { found = raw.trim().replace(/^Bearer\\s+/i, ''); break; }
-      try {
-        const obj = JSON.parse(raw);
-        const queue = [obj];
-        while (queue.length > 0) {
-          const curr = queue.shift();
-          if (curr && typeof curr === 'object') {
-            for (const subKey of Object.keys(curr)) {
-              const subVal = curr[subKey];
-              if (isCandidate(subVal) && /token|auth|key/i.test(subKey)) {
-                found = subVal.trim().replace(/^Bearer\\s+/i, '');
-                break;
-              }
-              if (typeof subVal === 'object' && subVal !== null) queue.push(subVal);
-            }
-          }
-          if (found) break;
-        }
-      } catch (e) {}
-      if (found) break;
-    }
-  }
-
-  if (!found) {
-    const m = document.cookie.match(/(?:token|authToken|access_token)=([^;]+)/i);
-    if (m && isCandidate(m[1])) found = decodeURIComponent(m[1]).replace(/^Bearer\\s+/i, '').trim();
-  }
-
-  if (found) {
-    console.log('%c[✓] Token found: ' + found, 'color: #bf2f1f; font-weight: bold; font-size: 14px;');
-    try { if (navigator.clipboard) navigator.clipboard.writeText(found); } catch(e) {}
-    window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(found);
-  } else {
-    alert('Could not find active token in storage. Please open "My Timeline" tab on Newton School LMS and run the command again!');
-  }
-})();`;
-
-  const copySnippet = () => {
-    navigator.clipboard.writeText(universalSnippet.replace(/\n\s+/g, ' '));
-    setCopiedSnippet(true);
-    setTimeout(() => setCopiedSnippet(false), 3000);
-  };
 
   // Robust Network Request Interceptor Hook
   const interceptorSnippet = `(() => {
@@ -825,9 +759,9 @@ export default function App() {
               A warm, paper-like attendance workbook for Newton School students. Real-time LMS telemetry, exact bunk quotas, and multi-course simulation.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-              <button className="btn-art btn-art-primary" onClick={copySnippet} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
+              <button className="btn-art btn-art-primary" onClick={copyInterceptor} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Zap size={16} />
-                <span>{copiedSnippet ? 'Copied to Clipboard!' : 'Copy 1-Click Console Scanner'}</span>
+                <span>{copiedInterceptor ? 'Copied Network Interceptor!' : 'Copy Network Interceptor'}</span>
               </button>
               <button className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Play size={16} />
@@ -837,62 +771,17 @@ export default function App() {
           </div>
 
           <div className="connect-grid-layout">
-            {/* Card 1: 1-Click DevTools Console Scanner */}
+            {/* Card 1: Direct Bearer Token Input */}
             <div className="art-card">
               <div className="art-card-header">
                 <div>
-                  <span className="tag-badge terracotta" style={{ marginBottom: '0.5rem' }}>01 // RECOMMENDED</span>
-                  <h3 className="art-card-title">⚡ 1-Click Console Scanner</h3>
+                  <span className="tag-badge terracotta" style={{ marginBottom: '0.5rem' }}>01 // DIRECT TOKEN</span>
+                  <h3 className="art-card-title">🔑 Direct Bearer Token</h3>
                 </div>
                 <span className="tag-badge green">Instant</span>
               </div>
-              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                Run this single-line script inside your browser DevTools console on the Newton School LMS tab. It extracts your active session key and automatically opens this dashboard:
-              </p>
-
-              <div className="workbook-code-box">
-                <div className="workbook-code-header">
-                  <span className="workbook-code-title">JAVASCRIPT // devtools_scanner.js</span>
-                  <button
-                    className="btn-art btn-art-primary"
-                    onClick={copySnippet}
-                    style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
-                  >
-                    {copiedSnippet ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copiedSnippet ? 'Copied' : 'Copy'}</span>
-                  </button>
-                </div>
-                <div className="workbook-code-body">
-                  {universalSnippet.slice(0, 120)}... [Click Copy button to grab full code]
-                </div>
-              </div>
-
-              <ul className="instructions-list">
-                <li className="instruction-step">
-                  <span className="step-num-badge">1</span>
-                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
-                </li>
-                <li className="instruction-step">
-                  <span className="step-num-badge">2</span>
-                  <span>Press <kbd>F12</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd>) &rarr; <strong>Console</strong></span>
-                </li>
-                <li className="instruction-step">
-                  <span className="step-num-badge">3</span>
-                  <span>Paste code and press <kbd>Enter</kbd></span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Card 2: Direct Bearer Token Input */}
-            <div className="art-card">
-              <div className="art-card-header">
-                <div>
-                  <span className="tag-badge orange" style={{ marginBottom: '0.5rem' }}>02 // MANUAL INPUT</span>
-                  <h3 className="art-card-title">🔑 Direct Bearer Token</h3>
-                </div>
-              </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.55 }}>
-                If you already copied your bearer authentication key from network request headers or curl, paste it directly:
+                Paste your active Bearer token or JWT session key copied from network request headers:
               </p>
 
               <form onSubmit={handleConnect}>
@@ -901,10 +790,10 @@ export default function App() {
                     Bearer Token / JWT:
                   </label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     className="art-select font-mono"
                     style={{ width: '100%', resize: 'none', fontSize: '0.82rem', padding: '0.75rem', borderRadius: 'var(--radius-nested)' }}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... or Bearer token"
                     value={inputToken}
                     onChange={(e) => setInputToken(e.target.value)}
                   />
@@ -928,19 +817,73 @@ export default function App() {
                 </div>
               </form>
 
-              {/* Card 3: Network Interceptor Hook */}
-              <div style={{ marginTop: '1.6rem', paddingTop: '1.25rem', borderTop: '2px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span className="tag-badge pink">03 // NETWORK INTERCEPTOR</span>
-                  <button className="btn-art btn-art-secondary" onClick={copyInterceptor} style={{ padding: '0.2rem 0.6rem', fontSize: '0.74rem' }}>
-                    {copiedInterceptor ? <Check size={11} /> : <Copy size={11} />}
-                    <span>{copiedInterceptor ? 'Copied' : 'Copy Interceptor'}</span>
+              <ul className="instructions-list" style={{ marginTop: '1.25rem' }}>
+                <li className="instruction-step">
+                  <span className="step-num-badge">1</span>
+                  <span>Open <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS <ExternalLink size={11} style={{ display: 'inline' }} /></a> &rarr; Press <kbd>F12</kbd></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">2</span>
+                  <span>Go to <strong>Network</strong> tab &rarr; Filter for <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>/api/</code></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">3</span>
+                  <span>Copy <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>Authorization</code> header value & paste above</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 2: Network Request Interceptor */}
+            <div className="art-card">
+              <div className="art-card-header">
+                <div>
+                  <span className="tag-badge pink" style={{ marginBottom: '0.5rem' }}>02 // NETWORK INTERCEPTOR</span>
+                  <h3 className="art-card-title">🛰️ Network Interceptor</h3>
+                </div>
+                <button
+                  className="btn-art btn-art-primary"
+                  onClick={copyInterceptor}
+                  style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
+                >
+                  {copiedInterceptor ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copiedInterceptor ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                Hooks into active API requests on the Newton School LMS tab and automatically captures your token on click:
+              </p>
+
+              <div className="workbook-code-box">
+                <div className="workbook-code-header">
+                  <span className="workbook-code-title">JAVASCRIPT // network_interceptor.js</span>
+                  <button
+                    className="btn-art btn-art-primary"
+                    onClick={copyInterceptor}
+                    style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
+                  >
+                    {copiedInterceptor ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedInterceptor ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Hooks into active XMLHttpRequest/fetch on LMS and captures token automatically on any button click.
-                </p>
+                <div className="workbook-code-body">
+                  {interceptorSnippet.slice(0, 120)}... [Click Copy button to grab full code]
+                </div>
               </div>
+
+              <ul className="instructions-list">
+                <li className="instruction-step">
+                  <span className="step-num-badge">1</span>
+                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">2</span>
+                  <span>Press <kbd>F12</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd>) &rarr; <strong>Console</strong></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">3</span>
+                  <span>Paste code, press <kbd>Enter</kbd>, and click any tab or course to auto-launch</span>
+                </li>
+              </ul>
             </div>
           </div>
 

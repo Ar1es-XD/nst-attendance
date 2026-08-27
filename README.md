@@ -44,7 +44,7 @@ A fast, modern web application and CLI tool that pulls real-time attendance dire
 
 ## ✨ Features
 
-* **⚡ 1-Click Universal Token Sync:** An auto-scanner script that detects tokens directly from Newton School's storage and logs in without digging through headers.
+* **🔑 Direct Bearer Token & 🛰️ Network Interceptor:** Connect directly by pasting your Bearer token or by running the real-time DevTools network interceptor to auto-capture session credentials.
 * **📊 Comprehensive Subject Breakdown:** Automatically traverses active semesters (e.g. Semester 3 CS) and displays each subject's attendance, percentage, and health status.
 * **🛡️ Mathematical Planning Engine:**
   * **Bunkable Classes:** Calculates how many classes you can safely miss while staying $\ge 75\%$.
