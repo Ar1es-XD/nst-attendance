@@ -1,25 +1,25 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Zap, 
-  Copy, 
-  Check, 
-  CheckCircle2, 
-  AlertTriangle, 
-  RotateCcw, 
-  FolderPlus, 
-  Trash2, 
-  ExternalLink, 
-  Info, 
-  LogOut, 
-  ShieldCheck, 
-  RefreshCw, 
-  Search, 
-  Sparkles, 
-  Calculator, 
-  Plus, 
-  Minus, 
-  Code2, 
-  Play, 
+import {
+  Zap,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  FolderPlus,
+  Trash2,
+  ExternalLink,
+  Info,
+  LogOut,
+  ShieldCheck,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Calculator,
+  Plus,
+  Minus,
+  Code2,
+  Play,
   Flame,
   Layers,
   BookOpen,
@@ -100,7 +100,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [copiedInterceptor, setCopiedInterceptor] = useState(false);
-  
+
   // Profile, Course, and Performance states
   const [profile, setProfile] = useState(null);
   const [semesters, setSemesters] = useState([]);
@@ -166,7 +166,7 @@ export default function App() {
     setSelectedSemesterHash('demo-sem-3');
     setSemesterTitle('Semester 3 (Computer Science & AI)');
     setOverallPerf(DEMO_PERFORMANCES['demo-sem-3']);
-    
+
     const demoSubjects = DEMO_SEMESTERS[0].learningUnits.map(unit => {
       const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
       return {
@@ -466,9 +466,9 @@ export default function App() {
   const calculateAttendanceStats = useCallback((attended, total, thresholdPercent) => {
     const threshold = thresholdPercent / 100;
     if (total === 0) return { percent: 0, status: 'safe', bunkable: 0, required: 0 };
-    
+
     const percent = (attended / total) * 100;
-    
+
     if (percent >= thresholdPercent) {
       const bunkable = Math.floor((attended - threshold * total) / threshold);
       return {
@@ -567,10 +567,10 @@ export default function App() {
     return subjectsData.map(sub => {
       const hash = sub.hash;
       const adj = adjustments[hash] || { adjAttended: 0, adjTotal: 0 };
-      
+
       const attended = Math.max(0, sub.rawAttended + adj.adjAttended);
       const total = Math.max(0, sub.rawTotal + adj.adjTotal);
-      
+
       const stats = calculateAttendanceStats(attended, total, targetThreshold);
 
       return {
@@ -592,15 +592,15 @@ export default function App() {
       const tot = overallPerf.total_lectures ?? 0;
       return { attended: att, total: tot, ...calculateAttendanceStats(att, tot, targetThreshold) };
     }
-    
+
     let sumAttended = 0;
     let sumTotal = 0;
-    
+
     processedSubjects.forEach(s => {
       sumAttended += s.attended;
       sumTotal += s.total;
     });
-    
+
     const stats = calculateAttendanceStats(sumAttended, sumTotal, targetThreshold);
     return {
       attended: sumAttended,
@@ -612,8 +612,8 @@ export default function App() {
   // Filtered subjects based on search query and status filter
   const filteredSubjects = useMemo(() => {
     return processedSubjects.filter(sub => {
-      const matchesSearch = searchQuery === '' || 
-        sub.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = searchQuery === '' ||
+        sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (sub.shortName && sub.shortName.toLowerCase().includes(searchQuery.toLowerCase())) ||
         sub.hash.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -665,8 +665,8 @@ export default function App() {
   };
 
   const toggleGroupSubject = (subjectHash) => {
-    setNewGroupSubjects(prev => 
-      prev.includes(subjectHash) 
+    setNewGroupSubjects(prev =>
+      prev.includes(subjectHash)
         ? prev.filter(h => h !== subjectHash)
         : [...prev, subjectHash]
     );
@@ -675,7 +675,7 @@ export default function App() {
   const getGroupStats = (group) => {
     let groupAtt = 0;
     let groupTot = 0;
-    
+
     group.subjectHashes.forEach(hash => {
       const sub = processedSubjects.find(s => s.hash === hash);
       if (sub) {
@@ -715,7 +715,7 @@ export default function App() {
           <div className="ticker-item">
             <span className="status-dot yellow"></span>
             <span>Current Target Threshold:</span>
-            <span className="pixel-tag"> {targetThreshold}% - Needed {overallStats.percent.toFixed(1)}%</span>
+            <span className="pixel-tag">Needed = {(targetThreshold - overallStats.percent).toFixed(1)}% </span>
           </div>
           <div className="ticker-item">
             <span className="status-dot green"></span>
@@ -778,8 +778,8 @@ export default function App() {
 
         <div className="nav-controls">
           {isAuthenticated && (
-            <button 
-              className="btn-art btn-art-secondary" 
+            <button
+              className="btn-art btn-art-secondary"
               onClick={() => isDemoMode ? enableDemoMode() : loadLiveDashboard(token, selectedSemesterHash)}
               disabled={loading}
               title="Resync data from LMS"
@@ -790,8 +790,8 @@ export default function App() {
           )}
 
           {isAuthenticated && (
-            <button 
-              className="btn-art btn-art-destructive" 
+            <button
+              className="btn-art btn-art-destructive"
               onClick={handleDisconnect}
               title="Disconnect session"
             >
@@ -848,8 +848,8 @@ export default function App() {
               <div className="workbook-code-box">
                 <div className="workbook-code-header">
                   <span className="workbook-code-title">JAVASCRIPT // devtools_scanner.js</span>
-                  <button 
-                    className="btn-art btn-art-primary" 
+                  <button
+                    className="btn-art btn-art-primary"
                     onClick={copySnippet}
                     style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
                   >
@@ -895,7 +895,7 @@ export default function App() {
                   <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                     Bearer Token / JWT:
                   </label>
-                  <textarea 
+                  <textarea
                     rows={3}
                     className="art-select font-mono"
                     style={{ width: '100%', resize: 'none', fontSize: '0.82rem', padding: '0.75rem', borderRadius: 'var(--radius-nested)' }}
@@ -954,7 +954,7 @@ export default function App() {
             <div className="toolbar-group">
               <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Sector / Semester:</span>
               {semesters.length > 0 ? (
-                <select 
+                <select
                   className="art-select"
                   value={selectedSemesterHash}
                   onChange={(e) => handleSemesterChange(e.target.value)}
@@ -975,7 +975,7 @@ export default function App() {
             <div className="toolbar-group">
               <div className="target-slider-box">
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target:</span>
-                <input 
+                <input
                   type="range"
                   min="50"
                   max="100"
@@ -988,7 +988,7 @@ export default function App() {
 
               <div className="preset-pills-cluster">
                 {[75, 80, 85, 90].map(val => (
-                  <button 
+                  <button
                     key={val}
                     className={`preset-pill-btn ${targetThreshold === val ? 'active' : ''}`}
                     onClick={() => setTargetThreshold(val)}
@@ -999,8 +999,8 @@ export default function App() {
               </div>
 
               {healthStats.totalSimulations > 0 && (
-                <button 
-                  className="btn-art btn-art-secondary" 
+                <button
+                  className="btn-art btn-art-secondary"
                   onClick={resetAllAdjustments}
                   style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
                 >
@@ -1035,7 +1035,7 @@ export default function App() {
                 <span className="metric-large-val">{overallStats.percent.toFixed(1)}%</span>
               </div>
               <span className="metric-note">
-                {overallStats.percent >= targetThreshold 
+                {overallStats.percent >= targetThreshold
                   ? `Safely above minimum target of ${targetThreshold}%`
                   : `Currently below mandated ${targetThreshold}% threshold`
                 }
@@ -1053,14 +1053,14 @@ export default function App() {
               </div>
               <div className="metric-number-row">
                 <span className="metric-large-val" style={{ color: overallStats.percent >= targetThreshold ? 'var(--status-green)' : 'var(--destructive)' }}>
-                  {overallStats.percent >= targetThreshold 
-                    ? `Bunk ${overallStats.bunkable}` 
+                  {overallStats.percent >= targetThreshold
+                    ? `Bunk ${overallStats.bunkable}`
                     : `Attend ${overallStats.required}`
                   }
                 </span>
               </div>
               <span className="metric-note">
-                {overallStats.percent >= targetThreshold 
+                {overallStats.percent >= targetThreshold
                   ? `Lectures can be safely skipped while staying ≥ ${targetThreshold}%`
                   : `Consecutive classes required to recover target`
                 }
@@ -1098,8 +1098,8 @@ export default function App() {
                 <span className="tag-badge green">SAFE</span>
               </div>
               <span className="metric-note">
-                {healthStats.dangerCount === 0 
-                  ? 'All enrolled courses currently in good standing' 
+                {healthStats.dangerCount === 0
+                  ? 'All enrolled courses currently in good standing'
                   : `${healthStats.dangerCount} course(s) require immediate attendance boost`
                 }
               </span>
@@ -1140,7 +1140,7 @@ export default function App() {
               <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
                 <span>Miss Full Week</span>
               </button>
-              <button 
+              <button
                 className={`btn-art ${healthStats.totalSimulations > 0 ? 'btn-art-destructive' : 'btn-art-secondary'}`}
                 onClick={resetAllAdjustments}
                 disabled={healthStats.totalSimulations === 0}
@@ -1157,14 +1157,14 @@ export default function App() {
           <div className="filter-search-row">
             <div className="search-field-box">
               <Search size={16} color="var(--text-muted)" />
-              <input 
+              <input
                 type="text"
                 placeholder="Search course name or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
                 >
@@ -1174,14 +1174,14 @@ export default function App() {
             </div>
 
             <div className="filter-tabs-cluster">
-              <button 
+              <button
                 className={`filter-tab ${statusFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('all')}
               >
                 <span>All Courses</span>
                 <span className="filter-num">{processedSubjects.length}</span>
               </button>
-              <button 
+              <button
                 className={`filter-tab ${statusFilter === 'safe' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('safe')}
               >
@@ -1189,7 +1189,7 @@ export default function App() {
                 <span>Safe</span>
                 <span className="filter-num">{processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length}</span>
               </button>
-              <button 
+              <button
                 className={`filter-tab ${statusFilter === 'warning' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('warning')}
               >
@@ -1197,7 +1197,7 @@ export default function App() {
                 <span>Caution</span>
                 <span className="filter-num">{processedSubjects.filter(s => s.status === 'warning').length}</span>
               </button>
-              <button 
+              <button
                 className={`filter-tab ${statusFilter === 'danger' ? 'active' : ''}`}
                 onClick={() => setStatusFilter('danger')}
               >
@@ -1206,7 +1206,7 @@ export default function App() {
                 <span className="filter-num">{processedSubjects.filter(s => s.status === 'danger').length}</span>
               </button>
               {healthStats.totalSimulations > 0 && (
-                <button 
+                <button
                   className={`filter-tab ${statusFilter === 'simulated' ? 'active' : ''}`}
                   onClick={() => setStatusFilter('simulated')}
                 >
@@ -1263,12 +1263,12 @@ export default function App() {
                         {/* Flat Progress Bar with Target Marker */}
                         <div style={{ marginTop: '1rem' }}>
                           <div className="flat-progress-rail">
-                            <div 
-                              className={`flat-progress-fill ${subject.status}`} 
+                            <div
+                              className={`flat-progress-fill ${subject.status}`}
                               style={{ width: `${Math.min(100, Math.max(0, subject.percent))}%` }}
                             ></div>
-                            <div 
-                              className="progress-notch" 
+                            <div
+                              className="progress-notch"
                               style={{ left: `${targetThreshold}%` }}
                               title={`Target: ${targetThreshold}%`}
                             ></div>
@@ -1308,7 +1308,7 @@ export default function App() {
                             WHAT-IF ADJUSTMENTS
                           </span>
                           {subject.hasAdjustments && (
-                            <button 
+                            <button
                               onClick={() => resetAdjustment(subject.hash)}
                               className="btn-art btn-art-destructive"
                               style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', height: 'auto', borderRadius: 'var(--radius-pill)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
@@ -1325,7 +1325,7 @@ export default function App() {
                           <div className="stepper-unit-box">
                             <span className="stepper-unit-label">ATTEND (+1)</span>
                             <div className="stepper-pill-controls">
-                              <button 
+                              <button
                                 className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'attend', -1)}
                                 title="Subtract simulated attend"
@@ -1335,7 +1335,7 @@ export default function App() {
                               <span className={`stepper-count-num ${subject.adjAttended > 0 ? 'active-plus' : ''}`}>
                                 {subject.adjAttended >= 0 ? `+${subject.adjAttended}` : subject.adjAttended}
                               </span>
-                              <button 
+                              <button
                                 className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'attend', 1)}
                                 title="Add simulated attend"
@@ -1349,7 +1349,7 @@ export default function App() {
                           <div className="stepper-unit-box">
                             <span className="stepper-unit-label">MISS (+1)</span>
                             <div className="stepper-pill-controls">
-                              <button 
+                              <button
                                 className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'miss', -1)}
                                 title="Subtract simulated miss"
@@ -1359,7 +1359,7 @@ export default function App() {
                               <span className={`stepper-count-num ${subject.adjTotal - subject.adjAttended > 0 ? 'active-minus' : ''}`}>
                                 +{subject.adjTotal - subject.adjAttended}
                               </span>
-                              <button 
+                              <button
                                 className="stepper-click-btn"
                                 onClick={() => adjustSubjectAttendance(subject.hash, 'miss', 1)}
                                 title="Add simulated miss"
@@ -1384,7 +1384,7 @@ export default function App() {
 
             {/* Right Column: Custom Subject Groups & Math Proofs */}
             <div className="sidebar-column">
-              
+
               {/* Subject Groups Card */}
               <div className="art-card">
                 <div className="art-card-header">
@@ -1392,7 +1392,7 @@ export default function App() {
                     <span className="tag-badge pink" style={{ marginBottom: '0.4rem' }}>AGGREGATIONS</span>
                     <h3 className="art-card-title">Subject Groups</h3>
                   </div>
-                  <button 
+                  <button
                     className="btn-art btn-art-secondary"
                     style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
                     onClick={() => setShowCreateGroup(prev => !prev)}
@@ -1406,7 +1406,7 @@ export default function App() {
                 {showCreateGroup && (
                   <form onSubmit={handleCreateGroup} style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', marginBottom: '1.25rem' }}>
                     <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Group Title:</span>
-                    <input 
+                    <input
                       type="text"
                       placeholder="e.g. Lab Practicals, Theory Bucket"
                       className="art-select"
@@ -1419,7 +1419,7 @@ export default function App() {
                     <div style={{ maxHeight: '140px', overflowY: 'auto', border: '2px solid var(--border-color)', borderRadius: 'var(--radius-button)', padding: '0.5rem', backgroundColor: 'var(--bg-surface)', marginBottom: '0.85rem' }}>
                       {processedSubjects.map(sub => (
                         <label key={sub.hash} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-primary)', padding: '0.3rem 0', cursor: 'pointer' }}>
-                          <input 
+                          <input
                             type="checkbox"
                             checked={newGroupSubjects.includes(sub.hash)}
                             onChange={() => toggleGroupSubject(sub.hash)}
@@ -1454,7 +1454,7 @@ export default function App() {
                                 {group.subjectHashes.length} course(s) aggregated
                               </span>
                             </div>
-                            <button 
+                            <button
                               onClick={() => handleDeleteGroup(group.id)}
                               style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', opacity: 0.7 }}
                               title="Delete Group"
@@ -1473,7 +1473,7 @@ export default function App() {
                           {/* Group Target Slider */}
                           <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>Target: {stats.threshold}%</span>
-                            <input 
+                            <input
                               type="range"
                               min="50"
                               max="100"
