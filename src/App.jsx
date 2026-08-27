@@ -715,7 +715,7 @@ export default function App() {
           <div className="ticker-item">
             <span className="status-dot yellow"></span>
             <span>Current Target Threshold:</span>
-            <span className="pixel-tag"> {targetThreshold}%</span>
+            <span className="pixel-tag"> {targetThreshold}% - Needed {overallStats.percent.toFixed(1)}%</span>
           </div>
           <div className="ticker-item">
             <span className="status-dot green"></span>
@@ -738,11 +738,7 @@ export default function App() {
             <span>Advanced Web Dev</span>
             <span className="pixel-tag">88.5% SAFE</span>
           </div>
-          <div className="ticker-item">
-            <span className="status-dot yellow"></span>
-            <span>Target Threshold: {targetThreshold}%</span>
-            <span className="pixel-tag">MANDATORY</span>
-          </div>
+
           <div className="ticker-item">
             <span className="status-dot green"></span>
             <span>Operating Systems</span>
