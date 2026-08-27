@@ -714,8 +714,8 @@ export default function App() {
           </div>
           <div className="ticker-item">
             <span className="status-dot yellow"></span>
-            <span>Target Threshold: {targetThreshold}%</span>
-            <span className="pixel-tag">MANDATORY</span>
+            <span>Current Target Threshold:</span>
+            <span className="pixel-tag"> {targetThreshold}%</span>
           </div>
           <div className="ticker-item">
             <span className="status-dot green"></span>
