@@ -702,53 +702,58 @@ export default function App() {
       {/* Auto-scrolling Ticker (Flat Art Pattern) */}
       <div className="ticker-container">
         <div className="ticker-track">
+          {/* Target Threshold & Overall Delta */}
           <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>DSA & Algorithms</span>
-            <span className="pixel-tag">92.4% SAFE</span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Advanced Web Dev</span>
-            <span className="pixel-tag">88.5% SAFE</span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot yellow"></span>
-            <span>Current Target Threshold :</span>
-            <span className="pixel-tag">Need {(targetThreshold - overallStats.percent).toFixed(1)}% </span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Operating Systems</span>
-            <span className="pixel-tag">85.0% SAFE</span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot red"></span>
-            <span>Database Management</span>
-            <span className="pixel-tag">68.2% LOW</span>
-          </div>
-          {/* Repeat for continuous 40s seamless loop */}
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>DSA & Algorithms</span>
-            <span className="pixel-tag">92.4% SAFE</span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Advanced Web Dev</span>
-            <span className="pixel-tag">88.5% SAFE</span>
+            <span className={`status-dot ${overallStats.percent >= targetThreshold ? 'green' : 'yellow'}`}></span>
+            <span>Target Threshold: {targetThreshold}%</span>
+            <span className="pixel-tag">
+              {overallStats.percent >= targetThreshold
+                ? `BUFFER +${(overallStats.percent - targetThreshold).toFixed(1)}% (${overallStats.bunkable} BUNKABLE)`
+                : `NEED +${(targetThreshold - overallStats.percent).toFixed(1)}% (ATTEND ${overallStats.required})`}
+            </span>
           </div>
 
+          {/* Dynamic Subject Status Stream */}
+          {(processedSubjects.length > 0 ? processedSubjects : [
+            { hash: 'dsa', name: 'DSA & Algorithms', percent: 92.4, status: 'safe' },
+            { hash: 'web', name: 'Advanced Web Dev', percent: 88.5, status: 'safe' },
+            { hash: 'os', name: 'Operating Systems', percent: 85.0, status: 'safe' },
+            { hash: 'dbms', name: 'Database Management', percent: 68.2, status: 'danger' }
+          ]).map(sub => (
+            <div key={sub.hash} className="ticker-item">
+              <span className={`status-dot ${sub.status === 'safe' ? 'green' : sub.status === 'warning' ? 'yellow' : 'red'}`}></span>
+              <span>{sub.shortName || sub.name}</span>
+              <span className="pixel-tag">
+                {sub.percent.toFixed(1)}% {sub.status === 'safe' ? 'SAFE' : sub.status === 'warning' ? 'CAUTION' : 'LOW'}
+              </span>
+            </div>
+          ))}
+
+          {/* Repeat for continuous 40s seamless loop */}
           <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Operating Systems</span>
-            <span className="pixel-tag">85.0% SAFE</span>
+            <span className={`status-dot ${overallStats.percent >= targetThreshold ? 'green' : 'yellow'}`}></span>
+            <span>Target Threshold: {targetThreshold}%</span>
+            <span className="pixel-tag">
+              {overallStats.percent >= targetThreshold
+                ? `BUFFER +${(overallStats.percent - targetThreshold).toFixed(1)}% (${overallStats.bunkable} BUNKABLE)`
+                : `NEED +${(targetThreshold - overallStats.percent).toFixed(1)}% (ATTEND ${overallStats.required})`}
+            </span>
           </div>
-          <div className="ticker-item">
-            <span className="status-dot red"></span>
-            <span>Database Management</span>
-            <span className="pixel-tag">68.2% LOW</span>
-          </div>
+
+          {(processedSubjects.length > 0 ? processedSubjects : [
+            { hash: 'dsa', name: 'DSA & Algorithms', percent: 92.4, status: 'safe' },
+            { hash: 'web', name: 'Advanced Web Dev', percent: 88.5, status: 'safe' },
+            { hash: 'os', name: 'Operating Systems', percent: 85.0, status: 'safe' },
+            { hash: 'dbms', name: 'Database Management', percent: 68.2, status: 'danger' }
+          ]).map(sub => (
+            <div key={`dup-${sub.hash}`} className="ticker-item">
+              <span className={`status-dot ${sub.status === 'safe' ? 'green' : sub.status === 'warning' ? 'yellow' : 'red'}`}></span>
+              <span>{sub.shortName || sub.name}</span>
+              <span className="pixel-tag">
+                {sub.percent.toFixed(1)}% {sub.status === 'safe' ? 'SAFE' : sub.status === 'warning' ? 'CAUTION' : 'LOW'}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1054,15 +1059,15 @@ export default function App() {
               <div className="metric-number-row">
                 <span className="metric-large-val" style={{ color: overallStats.percent >= targetThreshold ? 'var(--status-green)' : 'var(--destructive)' }}>
                   {overallStats.percent >= targetThreshold
-                    ? `Bunk ${overallStats.bunkable}`
-                    : `Attend ${overallStats.required}`
+                    ? `Bunk ${overallStats.bunkable} ${overallStats.bunkable === 1 ? 'Class' : 'Classes'}`
+                    : `Attend ${overallStats.required} ${overallStats.required === 1 ? 'Class' : 'Classes'}`
                   }
                 </span>
               </div>
               <span className="metric-note">
                 {overallStats.percent >= targetThreshold
-                  ? `Lectures can be safely skipped while staying ≥ ${targetThreshold}%`
-                  : `Consecutive classes required to recover target`
+                  ? `+${(overallStats.percent - targetThreshold).toFixed(1)}% buffer · Safe to skip ${overallStats.bunkable} ${overallStats.bunkable === 1 ? 'lecture' : 'lectures'} while staying ≥ ${targetThreshold}%`
+                  : `Need +${(targetThreshold - overallStats.percent).toFixed(1)}% · Must attend ${overallStats.required} consecutive ${overallStats.required === 1 ? 'lecture' : 'lectures'} to reach ${targetThreshold}%`
                 }
               </span>
             </div>
