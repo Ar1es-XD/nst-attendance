@@ -727,12 +727,6 @@ export default function App() {
             <span>Database Management</span>
             <span className="pixel-tag">68.2% LOW</span>
           </div>
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Newton School LMS Sync</span>
-            <span className="pixel-tag">ACTIVE</span>
-          </div>
-
           {/* Repeat for continuous 40s seamless loop */}
           <div className="ticker-item">
             <span className="status-dot green"></span>
@@ -758,11 +752,6 @@ export default function App() {
             <span className="status-dot red"></span>
             <span>Database Management</span>
             <span className="pixel-tag">68.2% LOW</span>
-          </div>
-          <div className="ticker-item">
-            <span className="status-dot green"></span>
-            <span>Newton School LMS Sync</span>
-            <span className="pixel-tag">ACTIVE</span>
           </div>
         </div>
       </div>
