@@ -17,7 +17,8 @@ import {
   Play,
   Flame,
   Layers,
-  BookOpen
+  BookOpen,
+  CheckCircle2
 } from 'lucide-react';
 
 const API_BASE = "";
@@ -237,7 +238,6 @@ export default function App() {
       }
 
       if (extractedSemesters.length > 0 && foundActiveUnits.length === 0) {
-        // Fallback to first semester or active semester if hash not matched
         const activeOne = extractedSemesters.find(s => s.isActive) || extractedSemesters[0];
         activeSemHash = activeOne.hash;
         setSemesterTitle(activeOne.title);
@@ -452,6 +452,22 @@ export default function App() {
     });
   };
 
+  const handleDecrementAttend = (subjectHash) => {
+    setAdjustments(prev => {
+      const current = prev[subjectHash] || { attended: 0, missed: 0 };
+      const newAttended = Math.max(0, current.attended - 1);
+      if (newAttended === 0 && current.missed === 0) {
+        const next = { ...prev };
+        delete next[subjectHash];
+        return next;
+      }
+      return {
+        ...prev,
+        [subjectHash]: { ...current, attended: newAttended }
+      };
+    });
+  };
+
   const handleSimulateBunk = (subjectHash) => {
     setAdjustments(prev => {
       const current = prev[subjectHash] || { attended: 0, missed: 0 };
@@ -459,6 +475,44 @@ export default function App() {
         ...prev,
         [subjectHash]: { ...current, missed: current.missed + 1 }
       };
+    });
+  };
+
+  const handleDecrementBunk = (subjectHash) => {
+    setAdjustments(prev => {
+      const current = prev[subjectHash] || { attended: 0, missed: 0 };
+      const newMissed = Math.max(0, current.missed - 1);
+      if (current.attended === 0 && newMissed === 0) {
+        const next = { ...prev };
+        delete next[subjectHash];
+        return next;
+      }
+      return {
+        ...prev,
+        [subjectHash]: { ...current, missed: newMissed }
+      };
+    });
+  };
+
+  const simulateAttendAll = () => {
+    setAdjustments(prev => {
+      const next = { ...prev };
+      processedSubjects.forEach(s => {
+        const current = next[s.hash] || { attended: 0, missed: 0 };
+        next[s.hash] = { ...current, attended: current.attended + 1 };
+      });
+      return next;
+    });
+  };
+
+  const simulateBunkAll = () => {
+    setAdjustments(prev => {
+      const next = { ...prev };
+      processedSubjects.forEach(s => {
+        const current = next[s.hash] || { attended: 0, missed: 0 };
+        next[s.hash] = { ...current, missed: current.missed + 1 };
+      });
+      return next;
     });
   };
 
@@ -494,9 +548,10 @@ export default function App() {
   const healthStats = useMemo(() => {
     const total = processedSubjects.length;
     const safeCount = processedSubjects.filter(s => s.status === 'safe').length;
+    const warningCount = processedSubjects.filter(s => s.status === 'warning').length;
     const dangerCount = processedSubjects.filter(s => s.status === 'danger').length;
     const totalSimulations = Object.keys(adjustments).length;
-    return { total, safeCount, dangerCount, totalSimulations };
+    return { total, safeCount, warningCount, dangerCount, totalSimulations };
   }, [processedSubjects, adjustments]);
 
   // Custom Groups Management
@@ -556,7 +611,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Auto-scrolling Ticker */}
+      {/* Auto-scrolling Ticker (Flat Art Pattern) */}
       <div className="ticker-container">
         <div className="ticker-track">
           {/* Target Threshold & Overall Delta */}
@@ -614,7 +669,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Navigation Header */}
+      {/* Flat Art Navigation Bar */}
       <nav className="art-nav">
         <div className="nav-brand-group">
           <div className="brand-icon-box">
@@ -667,103 +722,159 @@ export default function App() {
       {/* Main View: Connect Gateway vs Authenticated Command Center */}
       {!isAuthenticated ? (
         /* ==========================================================================
-           CONNECT GATEWAY (Clean & Secure Manual Token Entry)
+           CONNECT GATEWAY (Warm Flat Art Course Workbook Style)
            ========================================================================== */
         <div>
           <div className="connect-hero-box">
             <div className="hero-pill-badge">
               <BookOpen size={13} style={{ display: 'inline', verticalAlign: 'middle' }} />
-              <span>NEWTON SCHOOL // ATTENDANCE WORKBOOK</span>
+              <span>FLAT ART COURSE // ATTENDANCE WORKBOOK</span>
             </div>
             <h1 className="hero-main-heading">
               Calculate bunk capacity with <span className="hero-accent-text">mathematical certainty</span>.
             </h1>
             <p className="hero-description">
-              A paper-like attendance dashboard for Newton School students. Real-time LMS telemetry, exact bunk quotas, threshold proofs, and multi-course simulation.
+              A warm, paper-like attendance workbook for Newton School students. Real-time LMS telemetry, exact bunk quotas, threshold proofs, and multi-course simulation.
             </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+              <button className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
+                <Play size={16} />
+                <span>Explore Live Demo Sandbox</span>
+              </button>
+            </div>
           </div>
 
-          <div style={{ maxWidth: '680px', margin: '0 auto 2.5rem auto' }}>
-            <div className="art-card" style={{ padding: '2rem' }}>
-              <div className="art-card-header" style={{ marginBottom: '1.25rem' }}>
+          <div className="connect-grid-layout">
+            {/* Card 1: Direct Bearer Token Input */}
+            <div className="art-card">
+              <div className="art-card-header">
                 <div>
-                  <span className="tag-badge terracotta" style={{ marginBottom: '0.4rem' }}>01 // AUTHENTICATION</span>
-                  <h3 className="art-card-title">🔑 Connect with Bearer Token</h3>
+                  <span className="tag-badge terracotta" style={{ marginBottom: '0.5rem' }}>01 // DIRECT TOKEN</span>
+                  <h3 className="art-card-title">🔑 Direct Bearer Token</h3>
                 </div>
-                <span className="tag-badge green">Zero-Trust Local</span>
+                <span className="tag-badge green">Instant</span>
               </div>
-
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.55 }}>
-                Paste your active Bearer token to load all enrolled courses, live lecture counts, and attendance telemetry:
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.55 }}>
+                Paste your active Bearer token or JWT session key copied from network request headers:
               </p>
 
               <form onSubmit={handleConnect}>
-                <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    Bearer Token / JWT:
+                  </label>
                   <textarea
                     rows={4}
                     className="art-select font-mono"
-                    style={{ width: '100%', resize: 'none', fontSize: '0.85rem', padding: '0.85rem', borderRadius: 'var(--radius-nested)' }}
-                    placeholder="Paste Bearer token here (e.g. 9kWNDZN99CiyR5yDrpvHBNqUDgkTu0 or JWT)"
+                    style={{ width: '100%', resize: 'none', fontSize: '0.82rem', padding: '0.75rem', borderRadius: 'var(--radius-nested)' }}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... or Bearer token"
                     value={inputToken}
                     onChange={(e) => setInputToken(e.target.value)}
                   />
                 </div>
 
                 {error && (
-                  <div style={{ color: 'var(--destructive)', backgroundColor: 'var(--destructive-subtle)', border: '1.5px solid hsl(0, 84%, 60%, 0.3)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-button)', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ color: 'var(--destructive)', backgroundColor: 'var(--destructive-subtle)', border: '1.5px solid hsl(0, 84%, 60%, 0.3)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-button)', fontSize: '0.84rem', marginBottom: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                     <AlertTriangle size={16} />
                     <span>{error}</span>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button type="submit" className="btn-art btn-art-primary" style={{ flex: 2, padding: '0.75rem 1.25rem', fontSize: '0.92rem' }} disabled={loading}>
-                    {loading ? <RefreshCw size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
-                    <span>{loading ? 'Connecting LMS Telemetry...' : '🚀 Connect & Load Attendance'}</span>
+                <div style={{ display: 'flex', gap: '0.65rem' }}>
+                  <button type="submit" className="btn-art btn-art-primary" style={{ flex: 1 }} disabled={loading}>
+                    {loading ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                    <span>Load Attendance</span>
                   </button>
-                  <button type="button" className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ flex: 1, padding: '0.75rem 1.25rem', fontSize: '0.92rem' }} title="Preview without credentials">
-                    <Play size={14} />
-                    <span>Try Demo Mode</span>
+                  <button type="button" className="btn-art btn-art-secondary" onClick={enableDemoMode} title="Try without credentials">
+                    Demo Mode
                   </button>
                 </div>
               </form>
 
-              <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '2px dashed var(--border-color)' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                  💡 How to get your token in 5 seconds:
+              <ul className="instructions-list" style={{ marginTop: '1.25rem' }}>
+                <li className="instruction-step">
+                  <span className="step-num-badge">1</span>
+                  <span>Open <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS <ExternalLink size={11} style={{ display: 'inline' }} /></a> &rarr; Press <kbd>F12</kbd></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">2</span>
+                  <span>Go to <strong>Network</strong> tab &rarr; Filter for <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>/api/</code></span>
+                </li>
+                <li className="instruction-step">
+                  <span className="step-num-badge">3</span>
+                  <span>Copy <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>Authorization</code> header value & paste above</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 2: Workbook Capabilities & Formulas */}
+            <div className="art-card">
+              <div className="art-card-header">
+                <div>
+                  <span className="tag-badge gold" style={{ marginBottom: '0.5rem' }}>02 // WORKBOOK FEATURES</span>
+                  <h3 className="art-card-title">📐 Certainty Engine</h3>
                 </div>
-                <ul className="instructions-list">
-                  <li className="instruction-step">
-                    <span className="step-num-badge">1</span>
-                    <span>Open <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Newton School LMS <ExternalLink size={11} style={{ display: 'inline' }} /></a> &rarr; Press <kbd>F12</kbd> to open DevTools</span>
-                  </li>
-                  <li className="instruction-step">
-                    <span className="step-num-badge">2</span>
-                    <span>Go to the <strong>Network</strong> tab &rarr; Filter for <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>/api/</code></span>
-                  </li>
-                  <li className="instruction-step">
-                    <span className="step-num-badge">3</span>
-                    <span>Click any request &rarr; Copy the token from the <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>Authorization: Bearer &lt;token&gt;</code> header & paste it above!</span>
-                  </li>
-                </ul>
+                <span className="tag-badge terracotta">v2.0</span>
+              </div>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+                Engineered with mathematical precision to prevent debarment and track elective tracks:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                <div style={{ backgroundColor: 'var(--bg-muted)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-nested)', border: '1.5px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <Flame size={14} color="var(--primary)" />
+                    <strong style={{ fontSize: '0.85rem' }}>Exact Bunk Quota Calculation</strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Computes <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>floor((A - T*N)/T)</code> so you know exactly how many lectures you can safely miss.
+                  </p>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-muted)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-nested)', border: '1.5px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <Sparkles size={14} color="var(--tag-orange)" />
+                    <strong style={{ fontSize: '0.85rem' }}>Real-time What-If Stepper Simulation</strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Fine-grained simulation on every course with instant recalculation of required attendance.
+                  </p>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-muted)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-nested)', border: '1.5px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <Layers size={14} color="var(--status-green)" />
+                    <strong style={{ fontSize: '0.85rem' }}>Custom Subject Buckets & Tracks</strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Group Labs, Core CS, and Electives into custom threshold groups with isolated analytics.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ width: '100%', fontSize: '0.86rem' }}>
+                  <Play size={13} />
+                  <span>Preview Full Dashboard (Demo)</span>
+                </button>
               </div>
             </div>
           </div>
 
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.84rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
             <ShieldCheck size={16} color="var(--primary)" />
-            <span>Zero-Trust Architecture: Your token is stored strictly in your browser memory and never transmitted to any third-party server.</span>
+            <span>Zero-Trust Architecture: Your session tokens remain stored strictly in local browser memory and never leave your machine.</span>
           </div>
         </div>
       ) : (
         /* ==========================================================================
-           AUTHENTICATED COMMAND CENTER (Live LMS Telemetry & Analytics Dashboard)
+           AUTHENTICATED COMMAND CENTER (Flat Art Course Workbook Dashboard)
            ========================================================================== */
         <div>
           {/* Top Intelligence Toolbar */}
           <div className="toolbar-panel">
             <div className="toolbar-group">
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Semester:</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Sector / Semester:</span>
               {semesters.length > 0 ? (
                 <select
                   className="art-select"
@@ -778,14 +889,14 @@ export default function App() {
                 </select>
               ) : (
                 <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
-                  {semesterTitle}
+                  {semesterTitle} ({selectedSemesterHash})
                 </span>
               )}
             </div>
 
             <div className="toolbar-group">
               <div className="target-slider-box">
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target Threshold:</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target:</span>
                 <input
                   type="range"
                   min="50"
@@ -816,7 +927,7 @@ export default function App() {
                   style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
                 >
                   <RotateCcw size={13} />
-                  <span>Reset Simulations ({healthStats.totalSimulations})</span>
+                  <span>Reset Overrides ({healthStats.totalSimulations})</span>
                 </button>
               )}
             </div>
@@ -842,10 +953,12 @@ export default function App() {
                   {overallStats.percent >= targetThreshold ? 'PASSED' : 'DEFICIT'}
                 </span>
               </div>
-              <div className="metric-main-value">
-                {overallStats.percent.toFixed(1)}%
+              <div className="metric-number-row">
+                <span className="metric-large-val">
+                  {overallStats.percent.toFixed(1)}%
+                </span>
               </div>
-              <div className="metric-footer-note">
+              <div className="metric-note">
                 {overallStats.percent >= targetThreshold
                   ? `+${(overallStats.percent - targetThreshold).toFixed(1)}% safety buffer above ${targetThreshold}% threshold`
                   : `-${(targetThreshold - overallStats.percent).toFixed(1)}% deficit below ${targetThreshold}% threshold`}
@@ -863,14 +976,16 @@ export default function App() {
                   {overallStats.bunkable > 0 ? 'CAPACITY' : overallStats.required > 0 ? 'ATTEND' : 'BALANCED'}
                 </span>
               </div>
-              <div className="metric-main-value">
-                {overallStats.bunkable > 0
-                  ? `${overallStats.bunkable} Classes`
-                  : overallStats.required > 0
-                  ? `${overallStats.required} Classes`
-                  : '0 Classes'}
+              <div className="metric-number-row">
+                <span className="metric-large-val">
+                  {overallStats.bunkable > 0
+                    ? `${overallStats.bunkable} Classes`
+                    : overallStats.required > 0
+                    ? `${overallStats.required} Classes`
+                    : '0 Classes'}
+                </span>
               </div>
-              <div className="metric-footer-note">
+              <div className="metric-note">
                 {overallStats.bunkable > 0
                   ? `Safe to skip ${overallStats.bunkable} lectures while remaining >= ${targetThreshold}%`
                   : overallStats.required > 0
@@ -888,10 +1003,15 @@ export default function App() {
                 </div>
                 <span className="tag-badge dark">LMS LOG</span>
               </div>
-              <div className="metric-main-value">
-                {overallStats.attended} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ {overallStats.total}</span>
+              <div className="metric-number-row">
+                <span className="metric-large-val">
+                  {overallStats.attended}
+                </span>
+                <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  / {overallStats.total}
+                </span>
               </div>
-              <div className="metric-footer-note">
+              <div className="metric-note">
                 {overallStats.total - overallStats.attended} missed lectures across all courses
               </div>
             </div>
@@ -905,10 +1025,14 @@ export default function App() {
                 </div>
                 <span className="tag-badge terracotta">{healthStats.total} COURSES</span>
               </div>
-              <div className="metric-main-value">
-                {healthStats.safeCount} <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 500 }}>Safe</span> · {healthStats.dangerCount} <span style={{ fontSize: '1.1rem', color: 'var(--destructive)', fontWeight: 500 }}>Low</span>
+              <div className="metric-number-row">
+                <span className="metric-large-val">
+                  {healthStats.safeCount}
+                </span>
+                <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 600 }}>Safe</span>
+                <span style={{ fontSize: '1.1rem', color: 'var(--destructive)', fontWeight: 600, marginLeft: '0.4rem' }}>· {healthStats.dangerCount} Low</span>
               </div>
-              <div className="metric-footer-note">
+              <div className="metric-note">
                 {healthStats.totalSimulations > 0
                   ? `Simulating overrides on ${healthStats.totalSimulations} courses`
                   : `Real-time data synced with Newton School`}
@@ -916,282 +1040,337 @@ export default function App() {
             </div>
           </div>
 
+          {/* Batch Simulator Strip */}
+          <div className="batch-simulator-card">
+            <div className="batch-info-cluster">
+              <Sparkles size={16} color="var(--primary)" />
+              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Batch Course Simulator:</span>
+              <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>Apply universal attendance projections across all active courses</span>
+            </div>
+            <div className="batch-actions-cluster">
+              <button className="btn-art btn-art-secondary" onClick={simulateAttendAll} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
+                <Plus size={13} />
+                <span>Attend All (+1)</span>
+              </button>
+              <button className="btn-art btn-art-secondary" onClick={simulateBunkAll} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
+                <Minus size={13} />
+                <span>Bunk All (+1)</span>
+              </button>
+              {healthStats.totalSimulations > 0 && (
+                <button className="btn-art btn-art-destructive" onClick={resetAllAdjustments} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
+                  <RotateCcw size={13} />
+                  <span>Reset All ({healthStats.totalSimulations})</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Filter & Search Bar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div className="filter-tabs-box">
+          <div className="filter-search-row">
+            <div className="filter-tabs-cluster">
               {[
-                { id: 'all', label: `All Courses (${processedSubjects.length})` },
-                { id: 'safe', label: `Safe (>=${targetThreshold + 5}%)` },
-                { id: 'warning', label: `Caution (${targetThreshold}-${targetThreshold + 4}%)` },
-                { id: 'danger', label: `Low (<${targetThreshold}%)` },
-                ...(healthStats.totalSimulations > 0 ? [{ id: 'simulated', label: `Simulated (${healthStats.totalSimulations})` }] : [])
+                { id: 'all', label: 'All Courses', count: processedSubjects.length },
+                { id: 'safe', label: 'Safe', count: healthStats.safeCount },
+                { id: 'warning', label: 'Caution', count: healthStats.warningCount },
+                { id: 'danger', label: 'Low', count: healthStats.dangerCount },
+                ...(healthStats.totalSimulations > 0 ? [{ id: 'simulated', label: 'Simulated', count: healthStats.totalSimulations }] : [])
               ].map(tab => (
                 <button
                   key={tab.id}
-                  className={`filter-tab-btn ${statusFilter === tab.id ? 'active' : ''}`}
+                  className={`filter-tab ${statusFilter === tab.id ? 'active' : ''}`}
                   onClick={() => setStatusFilter(tab.id)}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  <span className="filter-num">{tab.count}</span>
                 </button>
               ))}
             </div>
 
-            <div style={{ position: 'relative', minWidth: '240px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="search-field-box">
+              <Search size={15} color="var(--text-muted)" />
               <input
                 type="text"
-                className="art-select"
-                style={{ paddingLeft: '2.4rem', width: '100%', fontSize: '0.85rem' }}
-                placeholder="Search subject or code..."
+                placeholder="Search by course name or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Courses Grid Stream */}
-          <div className="courses-stream">
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                <RefreshCw size={32} className="animate-spin" style={{ margin: '0 auto 1rem auto', color: 'var(--primary)' }} />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800 }}>Fetching Live LMS Telemetry...</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Querying enrolled courses and performance metrics from Newton School API</p>
-              </div>
-            ) : filteredSubjects.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3.5rem 1rem', border: '2px dashed var(--border-color)', borderRadius: 'var(--radius-card)', backgroundColor: 'var(--bg-card)' }}>
-                <Info size={32} style={{ margin: '0 auto 0.75rem auto', color: 'var(--text-muted)' }} />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 800 }}>No courses match your filter</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Try clearing your search query or selecting a different status filter.</p>
-                <button className="btn-art btn-art-secondary" onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}>
-                  Reset Filters
-                </button>
-              </div>
-            ) : (
-              filteredSubjects.map(sub => (
-                <div key={sub.hash} className={`course-card ${sub.status}`}>
-                  <div className="course-header-row">
-                    <div>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                        <span className="code-pill">{sub.shortName || 'LU'}</span>
+          {/* Main 2-Column Grid (Course Stream + Sidebar) */}
+          <div className="main-course-grid">
+            {/* Left Column: Live Course Cards Stream */}
+            <div className="courses-stream">
+              {loading ? (
+                <>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                </>
+              ) : filteredSubjects.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', border: '2px dashed var(--border-color)', borderRadius: 'var(--radius-card)', backgroundColor: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
+                  <Info size={32} style={{ margin: '0 auto 0.75rem auto', color: 'var(--text-muted)' }} />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 800 }}>No courses match your filter</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Try clearing your search query or selecting a different status filter.</p>
+                  <button className="btn-art btn-art-secondary" onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}>
+                    Reset Filters
+                  </button>
+                </div>
+              ) : (
+                filteredSubjects.map(sub => (
+                  <div key={sub.hash} className="course-card">
+                    <div className="course-top-meta">
+                      <div>
+                        <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                          <span className="tag-badge terracotta">{sub.shortName || 'LU'}</span>
+                          {sub.isSimulated && (
+                            <span className="tag-badge pink">
+                              <Sparkles size={10} />
+                              <span>SIMULATED</span>
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="course-name-heading">{sub.name}</h3>
+                      </div>
+
+                      <div className="course-rate-col">
+                        <div className="rate-big-pct" style={{ color: sub.status === 'safe' ? 'var(--status-green)' : sub.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
+                          {sub.percent.toFixed(1)}%
+                        </div>
+                        <div className="rate-fraction-text">
+                          {sub.attended} / {sub.total} classes
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Flat Progress Rail with Target Notch */}
+                    <div className="flat-progress-rail">
+                      <div
+                        className={`flat-progress-fill ${sub.status}`}
+                        style={{ width: `${Math.min(100, sub.percent)}%` }}
+                      />
+                      <div
+                        className="progress-notch"
+                        style={{ left: `${targetThreshold}%` }}
+                        title={`Target: ${targetThreshold}%`}
+                      />
+                    </div>
+
+                    {/* Action Verdict Banner */}
+                    <div className={`action-verdict-box ${sub.status}`}>
+                      {sub.bunkable > 0 ? (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span><strong>🟢 SAFE:</strong> You can safely skip <strong>{sub.bunkable}</strong> class(es) maintaining {targetThreshold}%</span>
+                        </>
+                      ) : sub.required > 0 ? (
+                        <>
+                          <AlertTriangle size={16} />
+                          <span><strong>🔴 ATTEND:</strong> Must attend next <strong>{sub.required}</strong> class(es) consecutively for {targetThreshold}%</span>
+                        </>
+                      ) : (
+                        <>
+                          <Info size={16} />
+                          <span><strong>🟡 ON TARGET:</strong> Exactly at {targetThreshold}% target threshold</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Stepper Simulator Panel */}
+                    <div className="stepper-simulator-panel">
+                      <div className="stepper-header-row">
+                        <span className="stepper-unit-label">WHAT-IF SIMULATION</span>
                         {sub.isSimulated && (
-                          <span className="sim-badge">
-                            <Sparkles size={10} />
-                            <span>SIMULATED</span>
-                          </span>
+                          <button
+                            className="btn-art btn-art-secondary"
+                            onClick={() => resetSubjectAdjustments(sub.hash)}
+                            style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', borderRadius: 'var(--radius-pill)' }}
+                            title="Reset simulation for this course"
+                          >
+                            <RotateCcw size={10} />
+                            <span>Reset</span>
+                          </button>
                         )}
                       </div>
-                      <h4 className="course-name-title">{sub.name}</h4>
-                    </div>
 
-                    <div className="course-percent-box">
-                      <div className="course-percent-val">
-                        {sub.percent.toFixed(1)}%
+                      <div className="stepper-grid-units">
+                        <div className="stepper-unit-box">
+                          <span className="stepper-unit-label">ATTEND (+1)</span>
+                          <div className="stepper-pill-controls">
+                            <button
+                              type="button"
+                              className="stepper-click-btn"
+                              onClick={() => handleDecrementAttend(sub.hash)}
+                              title="Decrease simulated attended"
+                            >
+                              -
+                            </button>
+                            <span className={`stepper-count-num ${sub.adjustments.attended > 0 ? 'active-plus' : ''}`}>
+                              +{sub.adjustments.attended}
+                            </span>
+                            <button
+                              type="button"
+                              className="stepper-click-btn"
+                              onClick={() => handleSimulateAttend(sub.hash)}
+                              title="Increase simulated attended"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="stepper-unit-box">
+                          <span className="stepper-unit-label">BUNK (+1)</span>
+                          <div className="stepper-pill-controls">
+                            <button
+                              type="button"
+                              className="stepper-click-btn"
+                              onClick={() => handleDecrementBunk(sub.hash)}
+                              title="Decrease simulated missed"
+                            >
+                              -
+                            </button>
+                            <span className={`stepper-count-num ${sub.adjustments.missed > 0 ? 'active-minus' : ''}`}>
+                              +{sub.adjustments.missed}
+                            </span>
+                            <button
+                              type="button"
+                              className="stepper-click-btn"
+                              onClick={() => handleSimulateBunk(sub.hash)}
+                              title="Increase simulated missed"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <span className={`status-pill-badge ${sub.status}`}>
-                        {sub.status === 'safe' ? 'SAFE' : sub.status === 'warning' ? 'CAUTION' : 'LOW'}
-                      </span>
                     </div>
                   </div>
-
-                  {/* Visual Progress Bar */}
-                  <div className="progress-track">
-                    <div
-                      className={`progress-fill ${sub.status}`}
-                      style={{ width: `${Math.min(100, sub.percent)}%` }}
-                    />
-                    <div
-                      className="threshold-marker-line"
-                      style={{ left: `${targetThreshold}%` }}
-                      title={`Target: ${targetThreshold}%`}
-                    />
-                  </div>
-
-                  {/* Attendance Stats & Simulation Controls */}
-                  <div className="course-footer-row">
-                    <div className="course-counts-group">
-                      <span className="count-label">ATTENDED:</span>
-                      <span className="count-val">{sub.attended} / {sub.total}</span>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        ({sub.total - sub.attended} missed)
-                      </span>
-                    </div>
-
-                    <div className="course-action-badge">
-                      {sub.bunkable > 0 ? (
-                        <span style={{ color: 'hsl(142, 60%, 35%)', fontWeight: 700, fontSize: '0.85rem' }}>
-                          🟢 +{sub.bunkable} Bunkable
-                        </span>
-                      ) : sub.required > 0 ? (
-                        <span style={{ color: 'var(--destructive)', fontWeight: 700, fontSize: '0.85rem' }}>
-                          🔴 Attend {sub.required} Next
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem' }}>
-                          🟡 On Target ({targetThreshold}%)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* What-If Simulator Controls */}
-                  <div className="simulation-toolbar">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                      What-If Simulation:
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                      <button
-                        className="btn-sim-tool"
-                        onClick={() => handleSimulateAttend(sub.hash)}
-                        title="Simulate attending next lecture"
-                      >
-                        <Plus size={12} />
-                        <span>Attend (+1)</span>
-                      </button>
-                      <button
-                        className="btn-sim-tool"
-                        onClick={() => handleSimulateBunk(sub.hash)}
-                        title="Simulate bunking next lecture"
-                      >
-                        <Minus size={12} />
-                        <span>Bunk (+1)</span>
-                      </button>
-                      {sub.isSimulated && (
-                        <button
-                          className="btn-sim-tool reset"
-                          onClick={() => resetSubjectAdjustments(sub.hash)}
-                          title="Reset simulations for this course"
-                        >
-                          <RotateCcw size={11} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Custom Subject Buckets / Groups Section */}
-          <div className="art-card" style={{ marginTop: '2.5rem', padding: '1.75rem' }}>
-            <div className="art-card-header" style={{ marginBottom: '1.25rem' }}>
-              <div>
-                <span className="tag-badge terracotta" style={{ marginBottom: '0.4rem' }}>FEATURE // AGGREGATIONS</span>
-                <h3 className="art-card-title">📚 Custom Subject Buckets & Tracks</h3>
-              </div>
-              <button
-                className="btn-art btn-art-primary"
-                onClick={() => setShowCreateGroup(!showCreateGroup)}
-                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
-              >
-                <FolderPlus size={14} />
-                <span>{showCreateGroup ? 'Close Editor' : 'New Bucket'}</span>
-              </button>
+                ))
+              )}
             </div>
 
-            {showCreateGroup && (
-              <form onSubmit={handleCreateGroup} style={{ backgroundColor: 'var(--bg-muted)', padding: '1.25rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', marginBottom: '1.5rem' }}>
-                <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Create New Subject Bucket</h4>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Bucket Name:</label>
-                  <input
-                    type="text"
-                    className="art-select"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
-                    placeholder="e.g. Core CS Labs, Theory Group"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                  />
+            {/* Right Column: Custom Buckets & Formula Proofs Sidebar */}
+            <div className="sidebar-column">
+              {/* Custom Subject Buckets Card */}
+              <div className="art-card">
+                <div className="art-card-header">
+                  <div>
+                    <span className="tag-badge terracotta" style={{ marginBottom: '0.4rem' }}>AGGREGATIONS</span>
+                    <h3 className="art-card-title">📚 Subject Buckets</h3>
+                  </div>
+                  <button
+                    className="btn-art btn-art-primary"
+                    onClick={() => setShowCreateGroup(!showCreateGroup)}
+                    style={{ padding: '0.35rem 0.8rem', fontSize: '0.78rem', borderRadius: 'var(--radius-pill)' }}
+                  >
+                    <FolderPlus size={13} />
+                    <span>{showCreateGroup ? 'Close' : 'New Bucket'}</span>
+                  </button>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>Select Included Courses:</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {processedSubjects.map(sub => (
-                      <button
-                        type="button"
-                        key={sub.hash}
-                        className={`preset-pill-btn ${newGroupSubjects.includes(sub.hash) ? 'active' : ''}`}
-                        onClick={() => toggleGroupSubject(sub.hash)}
-                        style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
-                      >
-                        {sub.shortName || sub.name}
-                      </button>
-                    ))}
+                {showCreateGroup && (
+                  <form onSubmit={handleCreateGroup} style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', marginBottom: '1.25rem' }}>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Bucket Name:</label>
+                      <input
+                        type="text"
+                        className="art-select"
+                        style={{ width: '100%', fontSize: '0.82rem', padding: '0.45rem 0.8rem' }}
+                        placeholder="e.g. Theory Track, Lab Focus"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Include Subjects:</label>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        {processedSubjects.map(sub => (
+                          <button
+                            type="button"
+                            key={sub.hash}
+                            className={`preset-pill-btn ${newGroupSubjects.includes(sub.hash) ? 'active' : ''}`}
+                            onClick={() => toggleGroupSubject(sub.hash)}
+                            style={{ fontSize: '0.74rem', padding: '0.25rem 0.6rem' }}
+                          >
+                            {sub.shortName || sub.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button type="submit" className="btn-art btn-art-primary" style={{ width: '100%', padding: '0.45rem 0.85rem', fontSize: '0.8rem' }} disabled={!newGroupName.trim() || newGroupSubjects.length === 0}>
+                      Create Bucket
+                    </button>
+                  </form>
+                )}
+
+                <div>
+                  {groups.map(group => {
+                    const stats = getGroupStats(group);
+                    return (
+                      <div key={group.id} className="group-item-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700 }}>{group.name}</h4>
+                          <button
+                            onClick={() => handleDeleteGroup(group.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', padding: '0.2rem' }}
+                            title="Delete bucket"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.45rem' }}>
+                          <span style={{ fontSize: '1.35rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: stats.percent >= stats.threshold ? 'var(--status-green)' : 'var(--destructive)' }}>
+                            {stats.percent.toFixed(1)}%
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                            {stats.attended} / {stats.total} classes
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: stats.bunkable > 0 ? 'var(--status-green)' : 'var(--destructive)' }}>
+                          {stats.bunkable > 0
+                            ? `🟢 +${stats.bunkable} Bunkable in bucket`
+                            : stats.required > 0
+                            ? `🔴 Attend next ${stats.required} classes`
+                            : `🟡 On Target (${stats.threshold}%)`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mathematical Proofs Card */}
+              <div className="art-card">
+                <div className="art-card-header">
+                  <div>
+                    <span className="tag-badge gold" style={{ marginBottom: '0.4rem' }}>PROOF // THEOREM</span>
+                    <h3 className="art-card-title">📐 Mathematical Formulas</h3>
                   </div>
                 </div>
 
-                <button type="submit" className="btn-art btn-art-primary" style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem' }} disabled={!newGroupName.trim() || newGroupSubjects.length === 0}>
-                  Save Bucket
-                </button>
-              </form>
-            )}
+                <div className="formula-card-content">
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>1. Bunk Capacity ($B$)</div>
+                  <code className="formula-code-line">
+                    B = floor((A - T * N) / T)
+                  </code>
+                  <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.78rem' }}>
+                    Where $A$ is attended lectures, $N$ is total lectures, and $T$ is threshold ($0.75$).
+                  </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-              {groups.map(group => {
-                const stats = getGroupStats(group);
-                return (
-                  <div key={group.id} className="art-card" style={{ padding: '1.25rem', border: '2px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 800 }}>{group.name}</h4>
-                      <button
-                        onClick={() => handleDeleteGroup(group.id)}
-                        style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', padding: '0.2rem' }}
-                        title="Delete bucket"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.65rem' }}>
-                      <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: stats.percent >= stats.threshold ? 'hsl(142, 60%, 35%)' : 'var(--destructive)' }}>
-                        {stats.percent.toFixed(1)}%
-                      </span>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {stats.attended} / {stats.total} classes
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: stats.bunkable > 0 ? 'hsl(142, 60%, 35%)' : 'var(--destructive)' }}>
-                      {stats.bunkable > 0
-                        ? `🟢 +${stats.bunkable} Bunkable in this group`
-                        : stats.required > 0
-                        ? `🔴 Attend ${stats.required} in this group`
-                        : `🟡 Exactly at ${stats.threshold}%`}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Mathematical Proofs & Formulas Card */}
-          <div className="art-card" style={{ marginTop: '2.5rem', padding: '1.75rem' }}>
-            <div className="art-card-header" style={{ marginBottom: '1rem' }}>
-              <div>
-                <span className="tag-badge terracotta" style={{ marginBottom: '0.4rem' }}>DOCUMENTATION // THEOREM</span>
-                <h3 className="art-card-title">📐 Mathematical Certainty Formulae</h3>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              <div style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)' }}>
-                <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>1. Bunk Capacity ($B$)</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--primary)', marginBottom: '0.35rem' }}>
-                  B = floor((A - T * N) / T)
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>2. Recovery Requirement ($R$)</div>
+                  <code className="formula-code-line" style={{ color: 'var(--destructive)' }}>
+                    R = ceil((T * N - A) / (1 - T))
+                  </code>
+                  <p style={{ margin: 0, fontSize: '0.78rem' }}>
+                    Uninterrupted consecutive classes required to reach exactly $T\%$.
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>
-                  Where $A$ is attended lectures, $N$ is total lectures, and $T$ is threshold ($0.75$).
-                </p>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)' }}>
-                <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>2. Recovery Requirement ($R$)</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--destructive)', marginBottom: '0.35rem' }}>
-                  R = ceil((T * N - A) / (1 - T))
-                </div>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>
-                  Number of uninterrupted consecutive classes required to reach exactly $T\%$.
-                </p>
               </div>
             </div>
           </div>
