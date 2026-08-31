@@ -18,7 +18,9 @@ import {
   Flame,
   Layers,
   BookOpen,
-  CheckCircle2
+  Sliders,
+  CheckCircle2,
+  Code2
 } from 'lucide-react';
 
 const API_BASE = "";
@@ -126,7 +128,7 @@ export default function App() {
   const [newGroupSubjects, setNewGroupSubjects] = useState([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
-  // Manual Adjustments/Overrides state (Simulation Mode)
+  // Manual Adjustments/Overrides state (Simulation Mode: { [hash]: { adjAttended: 0, adjTotal: 0 } })
   const [adjustments, setAdjustments] = useState(() => {
     const saved = localStorage.getItem('newton_attendance_adjustments');
     return saved ? JSON.parse(saved) : {};
@@ -389,137 +391,108 @@ export default function App() {
     }
   }, []);
 
-  // Processed subjects with what-if simulations
+  // Processed subjects with fine-grained simulation adjustments
   const processedSubjects = useMemo(() => {
-    return subjectsData.map(subject => {
-      const adj = adjustments[subject.hash] || { attended: 0, missed: 0 };
-      const simulatedAttended = Math.max(0, subject.rawAttended + adj.attended);
-      const simulatedMissed = Math.max(0, adj.missed);
-      const simulatedTotal = Math.max(0, subject.rawTotal + adj.attended + simulatedMissed);
+    return subjectsData.map(sub => {
+      const hash = sub.hash;
+      const adj = adjustments[hash] || { adjAttended: 0, adjTotal: 0 };
 
-      const stats = calculateAttendanceStats(simulatedAttended, simulatedTotal, targetThreshold);
-      const isSimulated = adj.attended !== 0 || adj.missed !== 0;
+      const attended = Math.max(0, sub.rawAttended + (adj.adjAttended || 0));
+      const total = Math.max(0, sub.rawTotal + (adj.adjTotal || 0));
+
+      const stats = calculateAttendanceStats(attended, total, targetThreshold);
 
       return {
-        ...subject,
-        attended: simulatedAttended,
-        total: simulatedTotal,
-        percent: stats.percent,
-        status: stats.status,
-        bunkable: stats.bunkable,
-        required: stats.required,
-        isSimulated,
-        adjustments: adj
+        ...sub,
+        attended,
+        total,
+        adjAttended: adj.adjAttended || 0,
+        adjTotal: adj.adjTotal || 0,
+        hasAdjustments: (adj.adjAttended || 0) !== 0 || (adj.adjTotal || 0) !== 0,
+        ...stats
       };
     });
   }, [subjectsData, adjustments, targetThreshold, calculateAttendanceStats]);
 
-  // Overall aggregate metrics
+  // Overall aggregate summary metrics
   const overallStats = useMemo(() => {
-    let totalAttended = 0;
-    let totalClasses = 0;
-
-    if (processedSubjects.length > 0) {
-      processedSubjects.forEach(s => {
-        totalAttended += s.attended;
-        totalClasses += s.total;
-      });
-    } else {
-      totalAttended = overallPerf.total_lectures_attended || 0;
-      totalClasses = overallPerf.total_lectures || 0;
+    if (processedSubjects.length === 0) {
+      const att = overallPerf.total_lectures_attended ?? 0;
+      const tot = overallPerf.total_lectures ?? 0;
+      return { attended: att, total: tot, ...calculateAttendanceStats(att, tot, targetThreshold) };
     }
 
-    const stats = calculateAttendanceStats(totalAttended, totalClasses, targetThreshold);
+    let sumAttended = 0;
+    let sumTotal = 0;
 
+    processedSubjects.forEach(s => {
+      sumAttended += s.attended;
+      sumTotal += s.total;
+    });
+
+    const stats = calculateAttendanceStats(sumAttended, sumTotal, targetThreshold);
     return {
-      attended: totalAttended,
-      total: totalClasses,
-      percent: stats.percent,
-      status: stats.status,
-      bunkable: stats.bunkable,
-      required: stats.required
+      attended: sumAttended,
+      total: sumTotal,
+      ...stats
     };
   }, [processedSubjects, overallPerf, targetThreshold, calculateAttendanceStats]);
 
-  // Simulation Handlers
-  const handleSimulateAttend = (subjectHash) => {
+  // Simulation Adjustment Handlers
+  const adjustSubjectAttendance = (subjectHash, type, delta) => {
     setAdjustments(prev => {
-      const current = prev[subjectHash] || { attended: 0, missed: 0 };
-      return {
-        ...prev,
-        [subjectHash]: { ...current, attended: current.attended + 1 }
-      };
-    });
-  };
+      const current = prev[subjectHash] || { adjAttended: 0, adjTotal: 0 };
+      let newAttended = current.adjAttended || 0;
+      let newTotal = current.adjTotal || 0;
 
-  const handleDecrementAttend = (subjectHash) => {
-    setAdjustments(prev => {
-      const current = prev[subjectHash] || { attended: 0, missed: 0 };
-      const newAttended = Math.max(0, current.attended - 1);
-      if (newAttended === 0 && current.missed === 0) {
+      if (type === 'attend') {
+        newAttended += delta;
+        newTotal += delta;
+      } else if (type === 'miss') {
+        newTotal += delta;
+      }
+
+      if (newAttended === 0 && newTotal === 0) {
         const next = { ...prev };
         delete next[subjectHash];
         return next;
       }
+
       return {
         ...prev,
-        [subjectHash]: { ...current, attended: newAttended }
+        [subjectHash]: {
+          adjAttended: newAttended,
+          adjTotal: newTotal
+        }
       };
     });
   };
 
-  const handleSimulateBunk = (subjectHash) => {
-    setAdjustments(prev => {
-      const current = prev[subjectHash] || { attended: 0, missed: 0 };
-      return {
-        ...prev,
-        [subjectHash]: { ...current, missed: current.missed + 1 }
-      };
-    });
-  };
-
-  const handleDecrementBunk = (subjectHash) => {
-    setAdjustments(prev => {
-      const current = prev[subjectHash] || { attended: 0, missed: 0 };
-      const newMissed = Math.max(0, current.missed - 1);
-      if (current.attended === 0 && newMissed === 0) {
-        const next = { ...prev };
-        delete next[subjectHash];
-        return next;
-      }
-      return {
-        ...prev,
-        [subjectHash]: { ...current, missed: newMissed }
-      };
-    });
-  };
-
-  const simulateAttendAll = () => {
-    setAdjustments(prev => {
-      const next = { ...prev };
-      processedSubjects.forEach(s => {
-        const current = next[s.hash] || { attended: 0, missed: 0 };
-        next[s.hash] = { ...current, attended: current.attended + 1 };
-      });
-      return next;
-    });
-  };
-
-  const simulateBunkAll = () => {
-    setAdjustments(prev => {
-      const next = { ...prev };
-      processedSubjects.forEach(s => {
-        const current = next[s.hash] || { attended: 0, missed: 0 };
-        next[s.hash] = { ...current, missed: current.missed + 1 };
-      });
-      return next;
-    });
-  };
-
-  const resetSubjectAdjustments = (subjectHash) => {
+  const resetAdjustment = (subjectHash) => {
     setAdjustments(prev => {
       const next = { ...prev };
       delete next[subjectHash];
+      return next;
+    });
+  };
+
+  const applyBatchSimulation = (action, count = 1) => {
+    setAdjustments(prev => {
+      const next = { ...prev };
+      processedSubjects.forEach(s => {
+        const current = next[s.hash] || { adjAttended: 0, adjTotal: 0 };
+        if (action === 'attend_all') {
+          next[s.hash] = {
+            adjAttended: (current.adjAttended || 0) + count,
+            adjTotal: (current.adjTotal || 0) + count
+          };
+        } else if (action === 'miss_all') {
+          next[s.hash] = {
+            adjAttended: current.adjAttended || 0,
+            adjTotal: (current.adjTotal || 0) + count
+          };
+        }
+      });
       return next;
     });
   };
@@ -528,18 +501,21 @@ export default function App() {
     setAdjustments({});
   };
 
-  // Filtered subjects
+  // Filtered subjects based on search query and status filter
   const filteredSubjects = useMemo(() => {
     return processedSubjects.filter(sub => {
-      const matchesSearch = sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (sub.shortName && sub.shortName.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesSearch = searchQuery === '' ||
+        sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sub.shortName && sub.shortName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        sub.hash.toLowerCase().includes(searchQuery.toLowerCase());
+
       if (!matchesSearch) return false;
 
       if (statusFilter === 'all') return true;
-      if (statusFilter === 'safe') return sub.status === 'safe';
+      if (statusFilter === 'safe') return sub.status === 'safe' || sub.status === 'warning';
       if (statusFilter === 'warning') return sub.status === 'warning';
       if (statusFilter === 'danger') return sub.status === 'danger';
-      if (statusFilter === 'simulated') return sub.isSimulated;
+      if (statusFilter === 'simulated') return sub.hasAdjustments;
       return true;
     });
   }, [processedSubjects, searchQuery, statusFilter]);
@@ -547,11 +523,11 @@ export default function App() {
   // Health summary metrics
   const healthStats = useMemo(() => {
     const total = processedSubjects.length;
-    const safeCount = processedSubjects.filter(s => s.status === 'safe').length;
-    const warningCount = processedSubjects.filter(s => s.status === 'warning').length;
+    const safeCount = processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length;
     const dangerCount = processedSubjects.filter(s => s.status === 'danger').length;
-    const totalSimulations = Object.keys(adjustments).length;
-    return { total, safeCount, warningCount, dangerCount, totalSimulations };
+    const totalSimulations = Object.values(adjustments).reduce((acc, curr) => acc + Math.abs(curr.adjAttended || 0) + Math.abs(curr.adjTotal || 0), 0);
+
+    return { total, safeCount, dangerCount, totalSimulations };
   }, [processedSubjects, adjustments]);
 
   // Custom Groups Management
@@ -574,6 +550,10 @@ export default function App() {
 
   const handleDeleteGroup = (groupId) => {
     setGroups(prev => prev.filter(g => g.id !== groupId));
+  };
+
+  const handleUpdateGroupThreshold = (groupId, val) => {
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, threshold: parseInt(val, 10) } : g));
   };
 
   const toggleGroupSubject = (subjectHash) => {
@@ -641,7 +621,7 @@ export default function App() {
             </div>
           ))}
 
-          {/* Seamless loop repeat */}
+          {/* Repeat for continuous 40s seamless loop */}
           <div className="ticker-item">
             <span className={`status-dot ${overallStats.percent >= targetThreshold ? 'green' : 'yellow'}`}></span>
             <span>Target Threshold: {targetThreshold}%</span>
@@ -669,7 +649,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Flat Art Navigation Bar */}
+      {/* Flat Art Course Header Navigation */}
       <nav className="art-nav">
         <div className="nav-brand-group">
           <div className="brand-icon-box">
@@ -722,7 +702,7 @@ export default function App() {
       {/* Main View: Connect Gateway vs Authenticated Command Center */}
       {!isAuthenticated ? (
         /* ==========================================================================
-           CONNECT GATEWAY (Warm Flat Art Course Workbook Style)
+           CONNECT GATEWAY (Flat Art Course Workbook Style)
            ========================================================================== */
         <div>
           <div className="connect-hero-box">
@@ -940,7 +920,7 @@ export default function App() {
             </div>
           )}
 
-          {/* 4 Metric Hero Tiles */}
+          {/* 4 Flat Metric Hero Tiles */}
           <div className="metrics-grid">
             {/* Tile 1: Overall Percentage */}
             <div className="metric-tile">
@@ -950,428 +930,517 @@ export default function App() {
                   <span>AGGREGATE RATE</span>
                 </div>
                 <span className={`tag-badge ${overallStats.percent >= targetThreshold ? 'green' : 'red'}`}>
-                  {overallStats.percent >= targetThreshold ? 'PASSED' : 'DEFICIT'}
+                  {overallStats.percent >= targetThreshold ? 'COMPLIANT' : 'LOW ATTENDANCE'}
                 </span>
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val">
-                  {overallStats.percent.toFixed(1)}%
-                </span>
+                <span className="metric-large-val">{overallStats.percent.toFixed(1)}%</span>
               </div>
-              <div className="metric-note">
+              <span className="metric-note">
                 {overallStats.percent >= targetThreshold
-                  ? `+${(overallStats.percent - targetThreshold).toFixed(1)}% safety buffer above ${targetThreshold}% threshold`
-                  : `-${(targetThreshold - overallStats.percent).toFixed(1)}% deficit below ${targetThreshold}% threshold`}
-              </div>
+                  ? `Safely above minimum target of ${targetThreshold}%`
+                  : `Currently below mandated ${targetThreshold}% threshold`
+                }
+              </span>
             </div>
 
-            {/* Tile 2: Action Verdict */}
+            {/* Tile 2: Net Action Verdict */}
             <div className="metric-tile">
               <div className="metric-top-row">
                 <div className="metric-label-group">
-                  <Flame size={14} color="var(--primary)" />
+                  <span className={`status-dot ${overallStats.percent >= targetThreshold ? 'green' : 'red'}`}></span>
                   <span>ACTION VERDICT</span>
                 </div>
-                <span className={`tag-badge ${overallStats.bunkable > 0 ? 'green' : overallStats.required > 0 ? 'red' : 'yellow'}`}>
-                  {overallStats.bunkable > 0 ? 'CAPACITY' : overallStats.required > 0 ? 'ATTEND' : 'BALANCED'}
-                </span>
+                {overallStats.percent >= targetThreshold ? <Flame size={18} color="var(--primary)" /> : <AlertTriangle size={18} color="var(--destructive)" />}
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val">
-                  {overallStats.bunkable > 0
-                    ? `${overallStats.bunkable} Classes`
-                    : overallStats.required > 0
-                    ? `${overallStats.required} Classes`
-                    : '0 Classes'}
+                <span className="metric-large-val" style={{ color: overallStats.percent >= targetThreshold ? 'var(--status-green)' : 'var(--destructive)' }}>
+                  {overallStats.percent >= targetThreshold
+                    ? `Bunk ${overallStats.bunkable} ${overallStats.bunkable === 1 ? 'Class' : 'Classes'}`
+                    : `Attend ${overallStats.required} ${overallStats.required === 1 ? 'Class' : 'Classes'}`
+                  }
                 </span>
               </div>
-              <div className="metric-note">
-                {overallStats.bunkable > 0
-                  ? `Safe to skip ${overallStats.bunkable} lectures while remaining >= ${targetThreshold}%`
-                  : overallStats.required > 0
-                  ? `Must attend next ${overallStats.required} lectures consecutively to reach ${targetThreshold}%`
-                  : `Exactly on target at ${targetThreshold}%`}
-              </div>
+              <span className="metric-note">
+                {overallStats.percent >= targetThreshold
+                  ? `+${(overallStats.percent - targetThreshold).toFixed(1)}% buffer · Safe to skip ${overallStats.bunkable} ${overallStats.bunkable === 1 ? 'lecture' : 'lectures'} while staying ≥ ${targetThreshold}%`
+                  : `Need +${(targetThreshold - overallStats.percent).toFixed(1)}% · Must attend ${overallStats.required} consecutive ${overallStats.required === 1 ? 'lecture' : 'lectures'} to reach ${targetThreshold}%`
+                }
+              </span>
             </div>
 
-            {/* Tile 3: Total Ratio */}
+            {/* Tile 3: Attendance Ratio */}
             <div className="metric-tile">
               <div className="metric-top-row">
                 <div className="metric-label-group">
-                  <Calculator size={14} color="var(--primary)" />
+                  <span className="status-dot gray"></span>
                   <span>TOTAL RATIO</span>
                 </div>
-                <span className="tag-badge dark">LMS LOG</span>
+                <Calculator size={18} color="var(--text-muted)" />
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val">
-                  {overallStats.attended}
-                </span>
-                <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  / {overallStats.total}
-                </span>
+                <span className="metric-large-val font-mono">{overallStats.attended} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
               </div>
-              <div className="metric-note">
-                {overallStats.total - overallStats.attended} missed lectures across all courses
-              </div>
+              <span className="metric-note">
+                Total lectures attended across all enrolled subjects
+              </span>
             </div>
 
-            {/* Tile 4: Health Overview */}
+            {/* Tile 4: Course Health Breakdown */}
             <div className="metric-tile">
               <div className="metric-top-row">
                 <div className="metric-label-group">
-                  <Layers size={14} color="var(--primary)" />
+                  <span className="status-dot yellow"></span>
                   <span>COURSE HEALTH</span>
                 </div>
-                <span className="tag-badge terracotta">{healthStats.total} COURSES</span>
+                <Layers size={18} color="var(--tag-gold)" />
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val">
-                  {healthStats.safeCount}
-                </span>
-                <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 600 }}>Safe</span>
-                <span style={{ fontSize: '1.1rem', color: 'var(--destructive)', fontWeight: 600, marginLeft: '0.4rem' }}>· {healthStats.dangerCount} Low</span>
+                <span className="metric-large-val font-mono">{healthStats.safeCount} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
+                <span className="tag-badge green">SAFE</span>
               </div>
-              <div className="metric-note">
-                {healthStats.totalSimulations > 0
-                  ? `Simulating overrides on ${healthStats.totalSimulations} courses`
-                  : `Real-time data synced with Newton School`}
-              </div>
+              <span className="metric-note">
+                {healthStats.dangerCount === 0
+                  ? 'All enrolled courses currently in good standing'
+                  : `${healthStats.dangerCount} course(s) require immediate attendance boost`
+                }
+              </span>
             </div>
           </div>
 
-          {/* Batch Simulator Strip */}
+          {/* Quick Batch Simulator Strip */}
           <div className="batch-simulator-card">
             <div className="batch-info-cluster">
-              <Sparkles size={16} color="var(--primary)" />
-              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Batch Course Simulator:</span>
-              <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>Apply universal attendance projections across all active courses</span>
+              <Sparkles size={20} color="var(--primary)" />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.15rem' }}>
+                  <span className="tag-badge terracotta">WHAT-IF ENGINE // PROJECTIONS</span>
+                  {healthStats.totalSimulations > 0 && (
+                    <span className="tag-badge orange">
+                      {healthStats.totalSimulations} ACTIVE OVERRIDE{healthStats.totalSimulations > 1 ? 'S' : ''}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                  Simulate universal schedule scenarios to test your attendance:
+                </span>
+              </div>
             </div>
+
             <div className="batch-actions-cluster">
-              <button className="btn-art btn-art-secondary" onClick={simulateAttendAll} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
-                <Plus size={13} />
-                <span>Attend All (+1)</span>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('attend_all', 1)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <Plus size={13} color="var(--status-green)" />
+                <span>+1 All (Day Present)</span>
               </button>
-              <button className="btn-art btn-art-secondary" onClick={simulateBunkAll} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
-                <Minus size={13} />
-                <span>Bunk All (+1)</span>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('miss_all', 1)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <Minus size={13} color="var(--destructive)" />
+                <span>+1 Miss All (Bunk Day)</span>
               </button>
-              {healthStats.totalSimulations > 0 && (
-                <button className="btn-art btn-art-destructive" onClick={resetAllAdjustments} style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}>
-                  <RotateCcw size={13} />
-                  <span>Reset All ({healthStats.totalSimulations})</span>
-                </button>
-              )}
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('attend_all', 3)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <span>+3 Full Week Present</span>
+              </button>
+              <button className="btn-art btn-art-secondary" onClick={() => applyBatchSimulation('miss_all', 3)} style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                <span>Miss Full Week</span>
+              </button>
+              <button
+                className={`btn-art ${healthStats.totalSimulations > 0 ? 'btn-art-destructive' : 'btn-art-secondary'}`}
+                onClick={resetAllAdjustments}
+                disabled={healthStats.totalSimulations === 0}
+                style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}
+                title="Reset all simulated adjustments back to portal values"
+              >
+                <RotateCcw size={13} />
+                <span>Reset All {healthStats.totalSimulations > 0 ? `(${healthStats.totalSimulations})` : ''}</span>
+              </button>
             </div>
           </div>
 
-          {/* Filter & Search Bar */}
+          {/* Search, Filter & View Controls */}
           <div className="filter-search-row">
-            <div className="filter-tabs-cluster">
-              {[
-                { id: 'all', label: 'All Courses', count: processedSubjects.length },
-                { id: 'safe', label: 'Safe', count: healthStats.safeCount },
-                { id: 'warning', label: 'Caution', count: healthStats.warningCount },
-                { id: 'danger', label: 'Low', count: healthStats.dangerCount },
-                ...(healthStats.totalSimulations > 0 ? [{ id: 'simulated', label: 'Simulated', count: healthStats.totalSimulations }] : [])
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  className={`filter-tab ${statusFilter === tab.id ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(tab.id)}
-                >
-                  <span>{tab.label}</span>
-                  <span className="filter-num">{tab.count}</span>
-                </button>
-              ))}
-            </div>
-
             <div className="search-field-box">
-              <Search size={15} color="var(--text-muted)" />
+              <Search size={16} color="var(--text-muted)" />
               <input
                 type="text"
-                placeholder="Search by course name or code..."
+                placeholder="Search course name or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
-          </div>
-
-          {/* Main 2-Column Grid (Course Stream + Sidebar) */}
-          <div className="main-course-grid">
-            {/* Left Column: Live Course Cards Stream */}
-            <div className="courses-stream">
-              {loading ? (
-                <>
-                  <div className="art-skeleton"></div>
-                  <div className="art-skeleton"></div>
-                  <div className="art-skeleton"></div>
-                  <div className="art-skeleton"></div>
-                </>
-              ) : filteredSubjects.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', border: '2px dashed var(--border-color)', borderRadius: 'var(--radius-card)', backgroundColor: 'var(--bg-surface)', gridColumn: '1 / -1' }}>
-                  <Info size={32} style={{ margin: '0 auto 0.75rem auto', color: 'var(--text-muted)' }} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 800 }}>No courses match your filter</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Try clearing your search query or selecting a different status filter.</p>
-                  <button className="btn-art btn-art-secondary" onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}>
-                    Reset Filters
-                  </button>
-                </div>
-              ) : (
-                filteredSubjects.map(sub => (
-                  <div key={sub.hash} className="course-card">
-                    <div className="course-top-meta">
-                      <div>
-                        <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                          <span className="tag-badge terracotta">{sub.shortName || 'LU'}</span>
-                          {sub.isSimulated && (
-                            <span className="tag-badge pink">
-                              <Sparkles size={10} />
-                              <span>SIMULATED</span>
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="course-name-heading">{sub.name}</h3>
-                      </div>
-
-                      <div className="course-rate-col">
-                        <div className="rate-big-pct" style={{ color: sub.status === 'safe' ? 'var(--status-green)' : sub.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
-                          {sub.percent.toFixed(1)}%
-                        </div>
-                        <div className="rate-fraction-text">
-                          {sub.attended} / {sub.total} classes
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Flat Progress Rail with Target Notch */}
-                    <div className="flat-progress-rail">
-                      <div
-                        className={`flat-progress-fill ${sub.status}`}
-                        style={{ width: `${Math.min(100, sub.percent)}%` }}
-                      />
-                      <div
-                        className="progress-notch"
-                        style={{ left: `${targetThreshold}%` }}
-                        title={`Target: ${targetThreshold}%`}
-                      />
-                    </div>
-
-                    {/* Action Verdict Banner */}
-                    <div className={`action-verdict-box ${sub.status}`}>
-                      {sub.bunkable > 0 ? (
-                        <>
-                          <CheckCircle2 size={16} />
-                          <span><strong>🟢 SAFE:</strong> You can safely skip <strong>{sub.bunkable}</strong> class(es) maintaining {targetThreshold}%</span>
-                        </>
-                      ) : sub.required > 0 ? (
-                        <>
-                          <AlertTriangle size={16} />
-                          <span><strong>🔴 ATTEND:</strong> Must attend next <strong>{sub.required}</strong> class(es) consecutively for {targetThreshold}%</span>
-                        </>
-                      ) : (
-                        <>
-                          <Info size={16} />
-                          <span><strong>🟡 ON TARGET:</strong> Exactly at {targetThreshold}% target threshold</span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Stepper Simulator Panel */}
-                    <div className="stepper-simulator-panel">
-                      <div className="stepper-header-row">
-                        <span className="stepper-unit-label">WHAT-IF SIMULATION</span>
-                        {sub.isSimulated && (
-                          <button
-                            className="btn-art btn-art-secondary"
-                            onClick={() => resetSubjectAdjustments(sub.hash)}
-                            style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', borderRadius: 'var(--radius-pill)' }}
-                            title="Reset simulation for this course"
-                          >
-                            <RotateCcw size={10} />
-                            <span>Reset</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="stepper-grid-units">
-                        <div className="stepper-unit-box">
-                          <span className="stepper-unit-label">ATTEND (+1)</span>
-                          <div className="stepper-pill-controls">
-                            <button
-                              type="button"
-                              className="stepper-click-btn"
-                              onClick={() => handleDecrementAttend(sub.hash)}
-                              title="Decrease simulated attended"
-                            >
-                              -
-                            </button>
-                            <span className={`stepper-count-num ${sub.adjustments.attended > 0 ? 'active-plus' : ''}`}>
-                              +{sub.adjustments.attended}
-                            </span>
-                            <button
-                              type="button"
-                              className="stepper-click-btn"
-                              onClick={() => handleSimulateAttend(sub.hash)}
-                              title="Increase simulated attended"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="stepper-unit-box">
-                          <span className="stepper-unit-label">BUNK (+1)</span>
-                          <div className="stepper-pill-controls">
-                            <button
-                              type="button"
-                              className="stepper-click-btn"
-                              onClick={() => handleDecrementBunk(sub.hash)}
-                              title="Decrease simulated missed"
-                            >
-                              -
-                            </button>
-                            <span className={`stepper-count-num ${sub.adjustments.missed > 0 ? 'active-minus' : ''}`}>
-                              +{sub.adjustments.missed}
-                            </span>
-                            <button
-                              type="button"
-                              className="stepper-click-btn"
-                              onClick={() => handleSimulateBunk(sub.hash)}
-                              title="Increase simulated missed"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  ✕
+                </button>
               )}
             </div>
 
-            {/* Right Column: Custom Buckets & Formula Proofs Sidebar */}
+            <div className="filter-tabs-cluster">
+              <button
+                className={`filter-tab ${statusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('all')}
+              >
+                <span>All Courses</span>
+                <span className="filter-num">{processedSubjects.length}</span>
+              </button>
+              <button
+                className={`filter-tab ${statusFilter === 'safe' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('safe')}
+              >
+                <span className="status-dot green"></span>
+                <span>Safe</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'safe' || s.status === 'warning').length}</span>
+              </button>
+              <button
+                className={`filter-tab ${statusFilter === 'warning' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('warning')}
+              >
+                <span className="status-dot yellow"></span>
+                <span>Caution</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'warning').length}</span>
+              </button>
+              <button
+                className={`filter-tab ${statusFilter === 'danger' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('danger')}
+              >
+                <span className="status-dot red"></span>
+                <span>Low Attendance</span>
+                <span className="filter-num">{processedSubjects.filter(s => s.status === 'danger').length}</span>
+              </button>
+              {healthStats.totalSimulations > 0 && (
+                <button
+                  className={`filter-tab ${statusFilter === 'simulated' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter('simulated')}
+                >
+                  <Sparkles size={12} color="var(--primary)" />
+                  <span>Simulated</span>
+                  <span className="filter-num">{processedSubjects.filter(s => s.hasAdjustments).length}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content Layout Grid */}
+          <div className="main-course-grid">
+            {/* Left Column: Subject Cards Stream */}
+            <div>
+              {loading ? (
+                <div className="courses-stream">
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                  <div className="art-skeleton"></div>
+                </div>
+              ) : filteredSubjects.length === 0 ? (
+                <div className="art-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem', color: 'var(--text-muted)' }}>
+                  <Search size={32} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '0.4rem', fontFamily: 'var(--font-display)' }}>No Courses Match Search</h3>
+                  <p style={{ fontSize: '0.88rem' }}>Try refining your query or reset the status filter.</p>
+                </div>
+              ) : (
+                <div className="courses-stream">
+                  {filteredSubjects.map(subject => (
+                    <div key={subject.hash} className="course-card">
+                      {/* Course Card Header */}
+                      <div>
+                        <div className="course-top-meta">
+                          <div>
+                            <h4 className="course-name-heading">{subject.name}</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                              <span className="tag-badge terracotta">#{subject.shortName || subject.hash}</span>
+                              <span className={`status-dot ${subject.status === 'safe' ? 'green' : subject.status === 'warning' ? 'yellow' : 'red'}`}></span>
+                              {subject.hasAdjustments && (
+                                <span className="tag-badge pink">
+                                  <Sparkles size={10} />
+                                  <span>SIMULATED</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="course-rate-col">
+                            <div className="rate-big-pct" style={{ color: subject.status === 'safe' ? 'var(--status-green)' : subject.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
+                              {subject.percent.toFixed(1)}%
+                            </div>
+                            <div className="rate-fraction-text">
+                              {subject.attended} / {subject.total} classes
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Flat Progress Bar with Target Marker */}
+                        <div style={{ marginTop: '1rem' }}>
+                          <div className="flat-progress-rail">
+                            <div
+                              className={`flat-progress-fill ${subject.status}`}
+                              style={{ width: `${Math.min(100, Math.max(0, subject.percent))}%` }}
+                            ></div>
+                            <div
+                              className="progress-notch"
+                              style={{ left: `${targetThreshold}%` }}
+                              title={`Target: ${targetThreshold}%`}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Verdict Banner */}
+                      <div className={`action-verdict-box ${subject.status}`}>
+                        {subject.total === 0 ? (
+                          <>
+                            <Info size={16} />
+                            <span>No lectures conducted yet.</span>
+                          </>
+                        ) : subject.percent >= targetThreshold ? (
+                          <>
+                            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                            <span>
+                              Safe to bunk <strong>{subject.bunkable}</strong> more {subject.bunkable === 1 ? 'class' : 'classes'} while staying &ge; {targetThreshold}%.
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                            <span>
+                              Must attend <strong>{subject.required}</strong> consecutive {subject.required === 1 ? 'class' : 'classes'} to reach {targetThreshold}%.
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Interactive Tactile Stepper Simulator */}
+                      <div className="stepper-simulator-panel">
+                        <div className="stepper-header-row">
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Sliders size={12} color="var(--primary)" />
+                            WHAT-IF ADJUSTMENTS
+                          </span>
+                          {subject.hasAdjustments && (
+                            <button
+                              onClick={() => resetAdjustment(subject.hash)}
+                              className="btn-art btn-art-destructive"
+                              style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', height: 'auto', borderRadius: 'var(--radius-pill)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              title="Reset simulation for this course"
+                            >
+                              <RotateCcw size={10} />
+                              <span>Reset</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="stepper-grid-units">
+                          {/* Attend Stepper */}
+                          <div className="stepper-unit-box">
+                            <span className="stepper-unit-label">ATTEND (+1)</span>
+                            <div className="stepper-pill-controls">
+                              <button
+                                className="stepper-click-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'attend', -1)}
+                                title="Subtract simulated attend"
+                              >
+                                -
+                              </button>
+                              <span className={`stepper-count-num ${subject.adjAttended > 0 ? 'active-plus' : ''}`}>
+                                {subject.adjAttended >= 0 ? `+${subject.adjAttended}` : subject.adjAttended}
+                              </span>
+                              <button
+                                className="stepper-click-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'attend', 1)}
+                                title="Add simulated attend"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Miss Stepper */}
+                          <div className="stepper-unit-box">
+                            <span className="stepper-unit-label">MISS (+1)</span>
+                            <div className="stepper-pill-controls">
+                              <button
+                                className="stepper-click-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'miss', -1)}
+                                title="Subtract simulated miss"
+                              >
+                                -
+                              </button>
+                              <span className={`stepper-count-num ${subject.adjTotal - subject.adjAttended > 0 ? 'active-minus' : ''}`}>
+                                +{subject.adjTotal - subject.adjAttended}
+                              </span>
+                              <button
+                                className="stepper-click-btn"
+                                onClick={() => adjustSubjectAttendance(subject.hash, 'miss', 1)}
+                                title="Add simulated miss"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {subject.hasAdjustments && (
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>
+                            LMS: {subject.rawAttended}/{subject.rawTotal} &rarr; Projected: {subject.attended}/{subject.total}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Custom Subject Groups & Math Proofs */}
             <div className="sidebar-column">
-              {/* Custom Subject Buckets Card */}
+
+              {/* Subject Groups Card */}
               <div className="art-card">
                 <div className="art-card-header">
                   <div>
-                    <span className="tag-badge terracotta" style={{ marginBottom: '0.4rem' }}>AGGREGATIONS</span>
-                    <h3 className="art-card-title">📚 Subject Buckets</h3>
+                    <span className="tag-badge pink" style={{ marginBottom: '0.4rem' }}>AGGREGATIONS</span>
+                    <h3 className="art-card-title">Subject Groups</h3>
                   </div>
                   <button
-                    className="btn-art btn-art-primary"
-                    onClick={() => setShowCreateGroup(!showCreateGroup)}
-                    style={{ padding: '0.35rem 0.8rem', fontSize: '0.78rem', borderRadius: 'var(--radius-pill)' }}
+                    className="btn-art btn-art-secondary"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                    onClick={() => setShowCreateGroup(prev => !prev)}
                   >
                     <FolderPlus size={13} />
-                    <span>{showCreateGroup ? 'Close' : 'New Bucket'}</span>
+                    <span>New Group</span>
                   </button>
                 </div>
 
+                {/* Create Group Form Drawer */}
                 {showCreateGroup && (
                   <form onSubmit={handleCreateGroup} style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', marginBottom: '1.25rem' }}>
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Bucket Name:</label>
-                      <input
-                        type="text"
-                        className="art-select"
-                        style={{ width: '100%', fontSize: '0.82rem', padding: '0.45rem 0.8rem' }}
-                        placeholder="e.g. Theory Track, Lab Focus"
-                        value={newGroupName}
-                        onChange={(e) => setNewGroupName(e.target.value)}
-                      />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Group Title:</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Lab Practicals, Theory Bucket"
+                      className="art-select"
+                      style={{ width: '100%', marginBottom: '0.75rem' }}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                    />
+
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Select Courses:</span>
+                    <div style={{ maxHeight: '140px', overflowY: 'auto', border: '2px solid var(--border-color)', borderRadius: 'var(--radius-button)', padding: '0.5rem', backgroundColor: 'var(--bg-surface)', marginBottom: '0.85rem' }}>
+                      {processedSubjects.map(sub => (
+                        <label key={sub.hash} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-primary)', padding: '0.3rem 0', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={newGroupSubjects.includes(sub.hash)}
+                            onChange={() => toggleGroupSubject(sub.hash)}
+                          />
+                          <span>{sub.name}</span>
+                        </label>
+                      ))}
                     </div>
 
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Include Subjects:</label>
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                        {processedSubjects.map(sub => (
-                          <button
-                            type="button"
-                            key={sub.hash}
-                            className={`preset-pill-btn ${newGroupSubjects.includes(sub.hash) ? 'active' : ''}`}
-                            onClick={() => toggleGroupSubject(sub.hash)}
-                            style={{ fontSize: '0.74rem', padding: '0.25rem 0.6rem' }}
-                          >
-                            {sub.shortName || sub.name}
-                          </button>
-                        ))}
-                      </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button type="submit" className="btn-art btn-art-primary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}>Create Group</button>
+                      <button type="button" className="btn-art btn-art-secondary" style={{ padding: '0.45rem', fontSize: '0.8rem' }} onClick={() => setShowCreateGroup(false)}>Cancel</button>
                     </div>
-
-                    <button type="submit" className="btn-art btn-art-primary" style={{ width: '100%', padding: '0.45rem 0.85rem', fontSize: '0.8rem' }} disabled={!newGroupName.trim() || newGroupSubjects.length === 0}>
-                      Create Bucket
-                    </button>
                   </form>
                 )}
 
+                {/* Groups List */}
                 <div>
-                  {groups.map(group => {
-                    const stats = getGroupStats(group);
-                    return (
-                      <div key={group.id} className="group-item-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700 }}>{group.name}</h4>
-                          <button
-                            onClick={() => handleDeleteGroup(group.id)}
-                            style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', padding: '0.2rem' }}
-                            title="Delete bucket"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                  {groups.length === 0 ? (
+                    <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>
+                      No custom groups created. Groups let you aggregate combined attendance across combinations of subjects.
+                    </p>
+                  ) : (
+                    groups.map(group => {
+                      const stats = getGroupStats(group);
+                      return (
+                        <div key={group.id} className="group-item-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>{group.name}</div>
+                              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                {group.subjectHashes.length} course(s) aggregated
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteGroup(group.id)}
+                              style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', opacity: 0.7 }}
+                              title="Delete Group"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.45rem' }}>
-                          <span style={{ fontSize: '1.35rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: stats.percent >= stats.threshold ? 'var(--status-green)' : 'var(--destructive)' }}>
-                            {stats.percent.toFixed(1)}%
-                          </span>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                            {stats.attended} / {stats.total} classes
-                          </span>
-                        </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0.6rem 0' }}>
+                            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.35rem', color: stats.status === 'safe' ? 'var(--status-green)' : stats.status === 'warning' ? 'var(--tag-gold)' : 'var(--destructive)' }}>
+                              {stats.percent.toFixed(1)}%
+                            </span>
+                            <span className="font-mono" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{stats.attended} / {stats.total} classes</span>
+                          </div>
 
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: stats.bunkable > 0 ? 'var(--status-green)' : 'var(--destructive)' }}>
-                          {stats.bunkable > 0
-                            ? `🟢 +${stats.bunkable} Bunkable in bucket`
-                            : stats.required > 0
-                            ? `🔴 Attend next ${stats.required} classes`
-                            : `🟡 On Target (${stats.threshold}%)`}
+                          {/* Group Target Slider */}
+                          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>Target: {stats.threshold}%</span>
+                            <input
+                              type="range"
+                              min="50"
+                              max="100"
+                              value={stats.threshold}
+                              onChange={(e) => handleUpdateGroupThreshold(group.id, e.target.value)}
+                              className="art-range-input"
+                              style={{ width: '80px' }}
+                            />
+                          </div>
+
+                          <div className={`action-verdict-box ${stats.status}`} style={{ marginTop: '0.6rem', padding: '0.5rem 0.75rem', fontSize: '0.78rem' }}>
+                            {stats.percent >= stats.threshold ? (
+                              <>
+                                <CheckCircle2 size={14} />
+                                <span>Safe to bunk <strong>{stats.bunkable}</strong> classes</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle size={14} />
+                                <span>Must attend <strong>{stats.required}</strong> consecutive classes</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* Mathematical Proofs Card */}
+              {/* Mathematical Proofs Workbook Card */}
               <div className="art-card">
-                <div className="art-card-header">
+                <div className="art-card-header" style={{ marginBottom: '0.75rem' }}>
                   <div>
-                    <span className="tag-badge gold" style={{ marginBottom: '0.4rem' }}>PROOF // THEOREM</span>
-                    <h3 className="art-card-title">📐 Mathematical Formulas</h3>
+                    <span className="tag-badge gold" style={{ marginBottom: '0.4rem' }}>ALGORITHMS</span>
+                    <h4 className="art-card-title" style={{ fontSize: '1.05rem' }}>Formulas & Proofs</h4>
                   </div>
+                  <Code2 size={18} color="var(--primary)" />
                 </div>
 
                 <div className="formula-card-content">
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>1. Bunk Capacity ($B$)</div>
-                  <code className="formula-code-line">
-                    B = floor((A - T * N) / T)
-                  </code>
-                  <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.78rem' }}>
-                    Where $A$ is attended lectures, $N$ is total lectures, and $T$ is threshold ($0.75$).
-                  </p>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.84rem' }}>Bunkable Class Capacity:</strong>
+                    <code className="formula-code-line">
+                      ⌊(Attended - T × Total) / T⌋
+                    </code>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Where T = Target % / 100.</span>
+                  </div>
 
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>2. Recovery Requirement ($R$)</div>
-                  <code className="formula-code-line" style={{ color: 'var(--destructive)' }}>
-                    R = ceil((T * N - A) / (1 - T))
-                  </code>
-                  <p style={{ margin: 0, fontSize: '0.78rem' }}>
-                    Uninterrupted consecutive classes required to reach exactly $T\%$.
-                  </p>
+                  <div>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.84rem' }}>Recovery Requirement:</strong>
+                    <code className="formula-code-line">
+                      ⌈(T × Total - Attended) / (1 - T)⌉
+                    </code>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Consecutive lectures needed to restore threshold.</span>
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
