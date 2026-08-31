@@ -589,9 +589,6 @@ export default function App() {
         console.warn("Live fetch error:", err);
       }
     }
-
-    // 4. Immediately launch the Analysis Panel with Semester 3 CS courses & bunk math
-    enableDemoMode();
   };
 
   const copyAndOpenLMS = handleOneClickLaunch;
