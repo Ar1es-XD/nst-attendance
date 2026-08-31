@@ -28,52 +28,58 @@ import {
 
 const API_BASE = "";
 
-// Sample realistic demo data matching Newton School CS curriculum
+// Real Newton School CS curriculum & actual course structures
 const DEMO_SEMESTERS = [
   {
-    hash: 'demo-sem-3',
-    title: 'Semester 3 (Computer Science & AI)',
-    shortName: 'Sem 3',
+    hash: 'u4fvf1rm9v2e',
+    title: "Newton School of Technology'25 (CS) (SVYASA) - Semester 3",
+    shortName: "S3 B'25-CS",
     isActive: true,
     learningUnits: [
-      { id: 1, hash: 'sub-dsa-301', title: 'Data Structures & Algorithms', short_display_name: 'DSA' },
-      { id: 2, hash: 'sub-os-302', title: 'Operating Systems & Linux Internals', short_display_name: 'OS' },
-      { id: 3, hash: 'sub-fs-303', title: 'Full Stack Web Development', short_display_name: 'WebDev' },
-      { id: 4, hash: 'sub-dbms-304', title: 'Database Management Systems', short_display_name: 'DBMS' },
-      { id: 5, hash: 'sub-cn-305', title: 'Computer Networks & Security', short_display_name: 'CN' },
-      { id: 6, hash: 'sub-ml-306', title: 'Machine Learning Foundations', short_display_name: 'ML' }
+      { id: 1, hash: 'y4jra1o5yjcj', title: "Analysis and Design of Algorithms", short_display_name: 'ADA' },
+      { id: 2, hash: 'x3300pxoaayu', title: "Analysis and Design of Algorithms Lab 2", short_display_name: 'ADA Lab 2' },
+      { id: 3, hash: 'ar66n55tzlgl', title: "Advanced Programming", short_display_name: 'Advanced Programming' },
+      { id: 4, hash: 'rw4p1qnhjcfn', title: "Advanced Programming Lab 2", short_display_name: 'AP Lab 2' },
+      { id: 5, hash: '3d7pc6pq59so', title: "AI for Interdisciplinary Applications", short_display_name: 'AI - IA' },
+      { id: 6, hash: '4s1f9uh5byn4', title: "AI for Interdisciplinary Applications Lab 2", short_display_name: 'AI Lab 2' },
+      { id: 7, hash: 'oojehllgsouk', title: "Calculus and linear Algebra for AI", short_display_name: 'Calculus and Algebra' },
+      { id: 8, hash: 'abqtra71lo83', title: "Calculus and linear Algebra for AI Lab 2", short_display_name: 'Maths-3 Lab 2' },
+      { id: 9, hash: 'qobpbvdsyekt', title: "Data Engineering", short_display_name: 'Data Engineering' },
+      { id: 10, hash: 'onr65jwzgdgj', title: "Data Engineering Lab 2", short_display_name: 'DE Lab 2' }
     ]
   },
   {
-    hash: 'demo-sem-2',
-    title: 'Semester 2 (Foundation Year)',
-    shortName: 'Sem 2',
+    hash: 'c6ootz3nd2y8',
+    title: "Newton School of Technology'25 (CS) (SVYASA) - Semester 2",
+    shortName: "S2 B'25-CS",
     isActive: false,
     learningUnits: [
-      { id: 101, hash: 'sub-oops-201', title: 'Object Oriented Programming in Java', short_display_name: 'Java' },
-      { id: 102, hash: 'sub-discrete-202', title: 'Discrete Mathematics', short_display_name: 'Math' }
+      { id: 101, hash: 'lpy9ubdndi3h', title: "Data Structures & Algorithms", short_display_name: 'DSA' },
+      { id: 102, hash: 'ba5zr8ljtuei', title: "Web Application Programming", short_display_name: 'WAP' }
     ]
   }
 ];
 
 const DEMO_PERFORMANCES = {
-  'demo-sem-3': { total_lectures: 202, total_lectures_attended: 159 },
-  'sub-dsa-301': { total_lectures: 38, total_lectures_attended: 34 },
-  'sub-os-302': { total_lectures: 34, total_lectures_attended: 26 },
-  'sub-fs-303': { total_lectures: 44, total_lectures_attended: 40 },
-  'sub-dbms-304': { total_lectures: 28, total_lectures_attended: 18 },
-  'sub-cn-305': { total_lectures: 28, total_lectures_attended: 22 },
-  'sub-ml-306': { total_lectures: 30, total_lectures_attended: 19 },
-  'demo-sem-2': { total_lectures: 80, total_lectures_attended: 68 },
-  'sub-oops-201': { total_lectures: 40, total_lectures_attended: 36 },
-  'sub-discrete-202': { total_lectures: 40, total_lectures_attended: 32 }
+  'u4fvf1rm9v2e': { total_lectures: 49, total_lectures_attended: 41 },
+  'y4jra1o5yjcj': { total_lectures: 10, total_lectures_attended: 8 },
+  'x3300pxoaayu': { total_lectures: 4, total_lectures_attended: 4 },
+  'ar66n55tzlgl': { total_lectures: 8, total_lectures_attended: 6 },
+  'rw4p1qnhjcfn': { total_lectures: 4, total_lectures_attended: 3 },
+  '3d7pc6pq59so': { total_lectures: 9, total_lectures_attended: 8 },
+  '4s1f9uh5byn4': { total_lectures: 4, total_lectures_attended: 4 },
+  'oojehllgsouk': { total_lectures: 6, total_lectures_attended: 5 },
+  'abqtra71lo83': { total_lectures: 2, total_lectures_attended: 2 },
+  'qobpbvdsyekt': { total_lectures: 2, total_lectures_attended: 1 },
+  'onr65jwzgdgj': { total_lectures: 0, total_lectures_attended: 0 },
+  'c6ootz3nd2y8': { total_lectures: 80, total_lectures_attended: 68 }
 };
 
 const DEMO_PROFILE = {
-  first_name: 'Alex',
-  last_name: 'Rivera',
-  email: 'alex.rivera@newtonschool.co',
-  username: 'alex_r302'
+  first_name: 'NST',
+  last_name: 'Student',
+  email: 'student@newtonschool.co',
+  username: 'nst_cs25'
 };
 
 export default function App() {
@@ -95,7 +101,6 @@ export default function App() {
   });
 
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [waitingForSync, setWaitingForSync] = useState(false);
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -509,7 +514,6 @@ export default function App() {
               localStorage.setItem('newton_bearer_token', clean);
               setToken(clean);
               setIsDemoMode(false);
-              setWaitingForSync(false);
               loadLiveDashboard(clean, selectedSemesterHash);
             }
           }
@@ -524,7 +528,6 @@ export default function App() {
           localStorage.setItem('newton_bearer_token', clean);
           setToken(clean);
           setIsDemoMode(false);
-          setWaitingForSync(false);
           loadLiveDashboard(clean, selectedSemesterHash);
         }
       }
@@ -579,7 +582,6 @@ export default function App() {
     if (activeToken && activeToken !== 'null' && activeToken !== 'undefined') {
       setToken(activeToken);
       setIsDemoMode(false);
-      setWaitingForSync(false);
       try {
         await loadLiveDashboard(activeToken);
         return;
@@ -588,8 +590,8 @@ export default function App() {
       }
     }
 
-    // 4. Open live sync listener modal to wait for token capture
-    setWaitingForSync(true);
+    // 4. Immediately launch the Analysis Panel with Semester 3 CS courses & bunk math
+    enableDemoMode();
   };
 
   const copyAndOpenLMS = handleOneClickLaunch;
@@ -832,83 +834,6 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Live Sync Listening Modal */}
-      {waitingForSync && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.5rem',
-          backdropFilter: 'blur(5px)'
-        }}>
-          <div className="art-card" style={{ maxWidth: '520px', width: '100%', padding: '2.2rem 1.8rem', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--primary-subtle)', color: 'var(--primary)', marginBottom: '1.25rem' }}>
-              <RefreshCw size={26} className="animate-spin" />
-            </div>
-
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
-              Connecting to Live Newton School LMS...
-            </h3>
-
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.55 }}>
-              LMS tab opened & detector code is copied to clipboard.
-            </p>
-
-            <div style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', textAlign: 'left', marginBottom: '1.5rem', fontSize: '0.84rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>1</span>
-                <span>Switch to the opened <strong>Newton School LMS tab</strong></span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>2</span>
-                <span>Press <kbd>F12</kbd> &rarr; <strong>Console</strong> &rarr; <kbd>Cmd/Ctrl+V</kbd> &rarr; <kbd>Enter</kbd></span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>3</span>
-                <span>This tab will <strong>instantly load your real live attendance</strong>!</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <button
-                className="btn-art btn-art-secondary"
-                onClick={() => setWaitingForSync(false)}
-                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-art btn-art-primary"
-                onClick={() => {
-                  const pasted = prompt("Paste your Bearer Token directly to load live data:");
-                  if (pasted) {
-                    const clean = pasted.replace(/^Bearer\s+/i, '').trim();
-                    if (clean) {
-                      localStorage.setItem('newton_bearer_token', clean);
-                      setToken(clean);
-                      setWaitingForSync(false);
-                      setIsDemoMode(false);
-                      loadLiveDashboard(clean);
-                    }
-                  }
-                }}
-                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem' }}
-              >
-                <ShieldCheck size={14} />
-                <span>Paste Token Directly</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Auto-scrolling Ticker (Flat Art Pattern) */}
       <div className="ticker-container">
         <div className="ticker-track">
