@@ -373,48 +373,62 @@ export default function App() {
       if (!el) {
         el = document.createElement('div');
         el.id = id;
-        el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999999;background:#18181b;color:#ffffff;padding:12px 24px;border-radius:12px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:2px solid #bf2f1f;display:flex;align-items:center;gap:10px;animation:fadeIn 0.3s ease;';
-        document.body.appendChild(el);
+        el.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:99999999;background:#18181b;color:#ffffff;padding:14px 28px;border-radius:14px;font-family:system-ui,-apple-system,sans-serif;font-size:15px;font-weight:600;box-shadow:0 12px 36px rgba(0,0,0,0.6);border:2px solid #bf2f1f;display:flex;align-items:center;gap:12px;';
+        (document.body || document.documentElement).appendChild(el);
       }
       el.innerHTML = isSuccess
-        ? '🚀 <strong style="color:#22c55e;">Token Captured!</strong> Redirecting to Attendance Tracker...'
+        ? '🚀 <strong style="color:#22c55e;">Session Token Captured!</strong> Redirecting to Attendance Tracker...'
         : '🛰️ <strong>NST Interceptor Armed:</strong> ' + msg;
     } catch(e) {}
   };
 
+  const isValidToken = (str) => {
+    if (typeof str !== 'string') return false;
+    const clean = str.replace(/^Bearer\\s+/i, '').trim();
+    if (clean.length < 20 || clean.length > 2000) return false;
+    if (/^(true|false|null|undefined|http|\\/|<!DOCTYPE|<html|\\{|\\[)/i.test(clean)) return false;
+    return /^[A-Za-z0-9_\\-\\.]+$/.test(clean);
+  };
+
   const saveAndOpen = (tok) => {
-    if (redirected || !tok || typeof tok !== 'string' || tok.length < 15) return;
-    const t = tok.replace(/^Bearer\\s+/i, '').trim();
-    if (!t || t === 'null' || t === 'undefined') return;
+    if (redirected || !tok) return;
+    const t = (typeof tok === 'string' ? tok : '').replace(/^Bearer\\s+/i, '').trim();
+    if (!t || t.length < 15 || t === 'null' || t === 'undefined') return;
     redirected = true;
-    console.log('%c[NST ATTENDANCE] Token captured: ' + t.slice(0, 15) + '...', 'color: #bf2f1f; font-weight: bold;');
+    console.log('%c[NST ATTENDANCE] Token captured: ' + t.slice(0, 10) + '...', 'color: #bf2f1f; font-weight: bold;');
     try { if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(e) {}
-    showBanner('Token captured!', true);
+    showBanner('Token captured: ' + t.slice(0, 8) + '...', true);
     setTimeout(() => {
       window.location.href = targetOrigin + '/?token=' + encodeURIComponent(t);
     }, 300);
   };
 
-  const isJwt = (str) => typeof str === 'string' && (/^eyJ[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+/.test(str.replace(/^Bearer\\s+/i, '').trim()));
-
   const scanStorage = (storage) => {
     try {
+      if (!storage) return null;
+      const priorityKeys = ['token', 'auth_token', 'access_token', 'authtoken', 'user_token', 'jwt', 'authorization', 'key', 'session_token'];
+      for (let i = 0; i < priorityKeys.length; i++) {
+        const val = storage.getItem(priorityKeys[i]);
+        if (isValidToken(val)) return val;
+      }
       for (let i = 0; i < storage.length; i++) {
         const k = storage.key(i);
         const v = storage.getItem(k);
         if (!v) continue;
-        if (isJwt(v)) return v;
+        if (isValidToken(v)) return v;
         try {
           const parsed = JSON.parse(v);
           if (typeof parsed === 'object' && parsed !== null) {
             for (const subKey in parsed) {
               const subVal = parsed[subKey];
-              if (isJwt(subVal)) return subVal;
+              if (isValidToken(subVal)) return subVal;
               if (typeof subVal === 'string') {
                 try {
                   const nested = JSON.parse(subVal);
-                  for (const nKey in nested) {
-                    if (isJwt(nested[nKey])) return nested[nKey];
+                  if (typeof nested === 'object' && nested !== null) {
+                    for (const nKey in nested) {
+                      if (isValidToken(nested[nKey])) return nested[nKey];
+                    }
                   }
                 } catch(e) {}
               }
@@ -426,7 +440,7 @@ export default function App() {
     return null;
   };
 
-  // 1. Check existing browser storage immediately for token
+  // 1. Check existing browser storage immediately
   const existingToken = scanStorage(localStorage) || scanStorage(sessionStorage);
   if (existingToken) {
     saveAndOpen(existingToken);
@@ -451,7 +465,7 @@ export default function App() {
     return oldFetch.apply(this, args);
   };
 
-  // 4. Fire background probe request
+  // 4. Trigger probe fetch in background
   try {
     fetch('/api/v1/user/me/', { credentials: 'include' }).catch(() => {});
   } catch(e) {}
