@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Newton School Attendance 1-Click Sync",
+  "version": "1.0.0",
+  "description": "1-Click automated live attendance extractor and sync for Newton School LMS",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://my.newtonschool.co/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://my.newtonschool.co/*"],
+      "js": ["content_lms.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.vercel.app/*"
+      ],
+      "js": ["content_app.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

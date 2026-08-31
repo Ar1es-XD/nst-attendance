@@ -517,13 +517,33 @@ export default function App() {
       } catch {}
     };
 
+    const handleExtensionMsg = (e) => {
+      if (e.data && e.data.type === 'NST_TOKEN_FOUND' && e.data.token) {
+        const clean = e.data.token.replace(/^Bearer\\s+/i, '').trim();
+        if (clean && clean.length >= 20) {
+          localStorage.setItem('newton_bearer_token', clean);
+          setToken(clean);
+          setIsDemoMode(false);
+          setWaitingForSync(false);
+          loadLiveDashboard(clean, selectedSemesterHash);
+        }
+      }
+    };
+
     window.addEventListener('focus', handleWindowFocus);
-    return () => window.removeEventListener('focus', handleWindowFocus);
+    window.addEventListener('message', handleExtensionMsg);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('message', handleExtensionMsg);
+    };
   }, [token, loadLiveDashboard, selectedSemesterHash]);
 
   const handleOneClickLaunch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
+
+    // 0. Request token from 1-click extension bridge
+    window.postMessage({ type: 'NST_REQUEST_TOKEN' }, '*');
 
     // 1. Copy interceptor snippet to clipboard
     const cleanSnippet = interceptorSnippet.replace(/\n\s+/g, ' ');
