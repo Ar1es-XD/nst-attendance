@@ -533,6 +533,21 @@ export default function App() {
       }
     };
 
+    // Auto-check local dev session token on initial mount
+    if (!token) {
+      fetch('/api/local-token')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.token) {
+            localStorage.setItem('newton_bearer_token', data.token);
+            setToken(data.token);
+            setIsDemoMode(false);
+            loadLiveDashboard(data.token, selectedSemesterHash);
+          }
+        })
+        .catch(() => {});
+    }
+
     window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('message', handleExtensionMsg);
     return () => {
@@ -545,26 +560,25 @@ export default function App() {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
 
-    // 0. Request token from 1-click extension bridge
-    window.postMessage({ type: 'NST_REQUEST_TOKEN' }, '*');
-
-    // 1. Copy interceptor snippet to clipboard
-    const cleanSnippet = interceptorSnippet.replace(/\n\s+/g, ' ');
+    // 0. Check local dev session token first
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(cleanSnippet);
+      const res = await fetch('/api/local-token');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.token) {
+          localStorage.setItem('newton_bearer_token', data.token);
+          setToken(data.token);
+          setIsDemoMode(false);
+          await loadLiveDashboard(data.token, selectedSemesterHash);
+          return;
+        }
       }
     } catch {}
-    setCopiedInterceptor(true);
-    setTimeout(() => setCopiedInterceptor(false), 3000);
 
-    // 2. Open LMS in background tab
-    const lmsUrl = "https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline";
-    try {
-      window.open(lmsUrl, '_blank');
-    } catch {}
+    // 1. Request token from 1-click extension bridge
+    window.postMessage({ type: 'NST_REQUEST_TOKEN' }, '*');
 
-    // 3. Check if active token exists in localStorage or clipboard
+    // 2. Check if active token exists in localStorage or clipboard
     let activeToken = localStorage.getItem('newton_bearer_token');
     if (!activeToken) {
       try {
@@ -589,6 +603,22 @@ export default function App() {
         console.warn("Live fetch error:", err);
       }
     }
+
+    // 3. Copy interceptor snippet to clipboard
+    const cleanSnippet = interceptorSnippet.replace(/\n\s+/g, ' ');
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cleanSnippet);
+      }
+    } catch {}
+    setCopiedInterceptor(true);
+    setTimeout(() => setCopiedInterceptor(false), 3000);
+
+    // 4. Open LMS in background tab
+    const lmsUrl = "https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline";
+    try {
+      window.open(lmsUrl, '_blank');
+    } catch {}
   };
 
   const copyAndOpenLMS = handleOneClickLaunch;
