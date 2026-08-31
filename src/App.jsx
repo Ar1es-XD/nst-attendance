@@ -95,6 +95,7 @@ export default function App() {
   });
 
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [waitingForSync, setWaitingForSync] = useState(false);
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -508,6 +509,7 @@ export default function App() {
               localStorage.setItem('newton_bearer_token', clean);
               setToken(clean);
               setIsDemoMode(false);
+              setWaitingForSync(false);
               loadLiveDashboard(clean, selectedSemesterHash);
             }
           }
@@ -521,7 +523,6 @@ export default function App() {
 
   const handleOneClickLaunch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    setLoading(true);
     setError('');
 
     // 1. Copy interceptor snippet to clipboard
@@ -558,18 +559,17 @@ export default function App() {
     if (activeToken && activeToken !== 'null' && activeToken !== 'undefined') {
       setToken(activeToken);
       setIsDemoMode(false);
+      setWaitingForSync(false);
       try {
         await loadLiveDashboard(activeToken);
-        setLoading(false);
         return;
       } catch (err) {
-        console.warn("Live fetch fallback:", err);
+        console.warn("Live fetch error:", err);
       }
     }
 
-    // 4. Immediately launch the Analysis Panel with curriculum courses & bunk math
-    enableDemoMode();
-    setLoading(false);
+    // 4. Open live sync listener modal to wait for token capture
+    setWaitingForSync(true);
   };
 
   const copyAndOpenLMS = handleOneClickLaunch;
@@ -812,6 +812,83 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Live Sync Listening Modal */}
+      {waitingForSync && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          backdropFilter: 'blur(5px)'
+        }}>
+          <div className="art-card" style={{ maxWidth: '520px', width: '100%', padding: '2.2rem 1.8rem', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--primary-subtle)', color: 'var(--primary)', marginBottom: '1.25rem' }}>
+              <RefreshCw size={26} className="animate-spin" />
+            </div>
+
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
+              Connecting to Live Newton School LMS...
+            </h3>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.55 }}>
+              LMS tab opened & detector code is copied to clipboard.
+            </p>
+
+            <div style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-nested)', border: '2px solid var(--border-color)', textAlign: 'left', marginBottom: '1.5rem', fontSize: '0.84rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>1</span>
+                <span>Switch to the opened <strong>Newton School LMS tab</strong></span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>2</span>
+                <span>Press <kbd>F12</kbd> &rarr; <strong>Console</strong> &rarr; <kbd>Cmd/Ctrl+V</kbd> &rarr; <kbd>Enter</kbd></span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <span className="step-num-badge" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>3</span>
+                <span>This tab will <strong>instantly load your real live attendance</strong>!</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                className="btn-art btn-art-secondary"
+                onClick={() => setWaitingForSync(false)}
+                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-art btn-art-primary"
+                onClick={() => {
+                  const pasted = prompt("Paste your Bearer Token directly to load live data:");
+                  if (pasted) {
+                    const clean = pasted.replace(/^Bearer\s+/i, '').trim();
+                    if (clean) {
+                      localStorage.setItem('newton_bearer_token', clean);
+                      setToken(clean);
+                      setWaitingForSync(false);
+                      setIsDemoMode(false);
+                      loadLiveDashboard(clean);
+                    }
+                  }
+                }}
+                style={{ padding: '0.55rem 1.1rem', fontSize: '0.84rem' }}
+              >
+                <ShieldCheck size={14} />
+                <span>Paste Token Directly</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Auto-scrolling Ticker (Flat Art Pattern) */}
       <div className="ticker-container">
         <div className="ticker-track">
