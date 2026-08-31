@@ -100,6 +100,13 @@ export default function App() {
     return '';
   });
 
+  const [isViewingDashboard, setIsViewingDashboard] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    const saved = localStorage.getItem('newton_bearer_token');
+    return Boolean((urlToken && urlToken.trim() !== '') || (saved && saved.trim() !== ''));
+  });
+
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [inputToken, setInputToken] = useState('');
   const [loading, setLoading] = useState(false);
@@ -348,6 +355,7 @@ export default function App() {
     }
     localStorage.setItem('newton_bearer_token', clean);
     setIsDemoMode(false);
+    setIsViewingDashboard(true);
     setToken(clean);
   };
 
@@ -357,6 +365,7 @@ export default function App() {
     setToken('');
     setInputToken('');
     setIsDemoMode(false);
+    setIsViewingDashboard(false);
     setProfile(null);
     setSemesters([]);
     setSubjectsData([]);
@@ -559,6 +568,7 @@ export default function App() {
   const handleOneClickLaunch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
+    setIsViewingDashboard(true);
 
     // 0. Check local dev session token first
     try {
@@ -857,7 +867,7 @@ export default function App() {
     };
   };
 
-  const isAuthenticated = Boolean((token && profile) || isDemoMode);
+  const isAuthenticated = Boolean(isViewingDashboard || (token && profile) || isDemoMode);
 
   return (
     <div className="app-container">
