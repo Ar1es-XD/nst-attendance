@@ -473,24 +473,106 @@ export default function App() {
   showBanner('Click "My Timeline" or any course on this page to auto-launch.');
 })();`;
 
-  const copyAndOpenLMS = (e) => {
+  // Automatic background token sniffer on window focus
+  useEffect(() => {
+    const handleWindowFocus = async () => {
+      // Check query param first
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token');
+      if (urlToken && urlToken !== 'null' && urlToken !== 'undefined' && urlToken.trim() !== '') {
+        const clean = urlToken.replace(/^Bearer\\s+/i, '').trim();
+        localStorage.setItem('newton_bearer_token', clean);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setToken(clean);
+        setIsDemoMode(false);
+        loadLiveDashboard(clean, selectedSemesterHash);
+        return;
+      }
+
+      // Check localStorage
+      const saved = localStorage.getItem('newton_bearer_token');
+      if (saved && saved !== 'null' && saved !== 'undefined' && saved !== token) {
+        setToken(saved);
+        setIsDemoMode(false);
+        loadLiveDashboard(saved, selectedSemesterHash);
+        return;
+      }
+
+      // Check clipboard if permitted
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const clean = text ? text.replace(/^Bearer\\s+/i, '').trim() : '';
+          if (clean && clean.length >= 20 && clean.length <= 500 && !clean.includes('\n') && !clean.includes('function') && !clean.includes('window') && !clean.includes('{')) {
+            if (clean !== token) {
+              localStorage.setItem('newton_bearer_token', clean);
+              setToken(clean);
+              setIsDemoMode(false);
+              loadLiveDashboard(clean, selectedSemesterHash);
+            }
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [token, loadLiveDashboard, selectedSemesterHash]);
+
+  const handleOneClickLaunch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // 1. Copy interceptor snippet to clipboard
     const cleanSnippet = interceptorSnippet.replace(/\n\s+/g, ' ');
     try {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(cleanSnippet);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cleanSnippet);
       }
-    } catch (err) {
-      console.warn("Clipboard copy warning:", err);
-    }
+    } catch {}
     setCopiedInterceptor(true);
     setTimeout(() => setCopiedInterceptor(false), 3000);
 
-    // Automatically launch / open LMS in a new tab
+    // 2. Open LMS in background tab
     const lmsUrl = "https://my.newtonschool.co/course/u4fvf1rm9v2e/details?tab=my-timeline";
-    window.open(lmsUrl, '_blank');
+    try {
+      window.open(lmsUrl, '_blank');
+    } catch {}
+
+    // 3. Check if active token exists in localStorage or clipboard
+    let activeToken = localStorage.getItem('newton_bearer_token');
+    if (!activeToken) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const clipText = await navigator.clipboard.readText();
+          const clean = clipText ? clipText.replace(/^Bearer\\s+/i, '').trim() : '';
+          if (clean && clean.length >= 20 && clean.length <= 500 && !clean.includes('\n') && !clean.includes('function') && !clean.includes('{')) {
+            activeToken = clean;
+            localStorage.setItem('newton_bearer_token', clean);
+          }
+        }
+      } catch {}
+    }
+
+    if (activeToken && activeToken !== 'null' && activeToken !== 'undefined') {
+      setToken(activeToken);
+      setIsDemoMode(false);
+      try {
+        await loadLiveDashboard(activeToken);
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn("Live fetch fallback:", err);
+      }
+    }
+
+    // 4. Immediately launch the Analysis Panel with curriculum courses & bunk math
+    enableDemoMode();
+    setLoading(false);
   };
 
+  const copyAndOpenLMS = handleOneClickLaunch;
   const bookmarkletHref = `javascript:${encodeURIComponent(interceptorSnippet.replace(/\n\s+/g, ' '))}`;
 
   // Mathematical calculation engine
@@ -813,6 +895,29 @@ export default function App() {
         </div>
 
         <div className="nav-controls">
+          {isAuthenticated && isDemoMode && (
+            <button
+              className="btn-art btn-art-primary"
+              onClick={() => {
+                const tok = prompt("Paste your Newton School Bearer Token to switch to Live LMS Sync:");
+                if (tok) {
+                  const clean = tok.replace(/^Bearer\s+/i, '').trim();
+                  if (clean) {
+                    localStorage.setItem('newton_bearer_token', clean);
+                    setToken(clean);
+                    setIsDemoMode(false);
+                    loadLiveDashboard(clean);
+                  }
+                }
+              }}
+              title="Paste your live bearer token"
+              style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem' }}
+            >
+              <ShieldCheck size={14} />
+              <span>Connect Live LMS</span>
+            </button>
+          )}
+
           {isAuthenticated && (
             <button
               className="btn-art btn-art-secondary"
