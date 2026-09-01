@@ -96,11 +96,6 @@ export default function MetricTiles({
               </div>
             </>
           )}
-
-          <div className="causation-summary-text">
-            {causationReport.causationSummary}
-          </div>
-
           {causationReport.nextLectureAdvisory && (
             <div className={`next-lecture-advisory ${causationReport.nextLectureAdvisory.isSafeToSkip ? 'safe' : 'unsafe'}`}>
               <strong>Next Class:</strong> {causationReport.nextLectureAdvisory.courseShortName} — {causationReport.nextLectureAdvisory.message}
