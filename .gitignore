@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 .token
 scratch/
+scripts/
 .vercel
 
