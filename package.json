@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "deploy": "npx vercel",
-    "test": "node --test test/causation.test.js",
+    "test": "node --test test/*.test.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

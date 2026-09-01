@@ -41,6 +41,7 @@ import {
   calculateSubjectMetrics,
   verifyActionCausation
 } from './utils/causationEngine.js';
+import { formatSlackTeacherMessage } from './utils/slackMessageFormatter.js';
 
 export default function App() {
   // Check URL query parameter for ?token=... first, then localStorage
@@ -83,6 +84,7 @@ export default function App() {
   const [lectureFilterCourse, setLectureFilterCourse] = useState('all');
   const [lectureSearch, setLectureSearch] = useState('');
   const [copiedToast, setCopiedToast] = useState('');
+  const [teacherHonorific, setTeacherHonorific] = useState('Sir');
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -412,24 +414,17 @@ export default function App() {
   };
 
   const handleCopyForTeacher = (lecture) => {
-    const { dateStr, timeStr } = formatLectureDateTime(lecture.start_timestamp, lecture.end_timestamp);
     const firstName = lecture.instructor_user?.first_name ? lecture.instructor_user.first_name.trim() : '';
-    const salutation = firstName ? `Hi ${firstName} Sir/Ma'am,` : `Hi Sir/Ma'am,`;
-    const statusText = lecture.attended ? 'Attended' : 'Marked Absent';
-    const studentName = profile?.first_name 
-      ? `${profile.first_name} ${profile.last_name || ''}`.trim() 
-      : 'Student';
-    const courseTitle = lecture.course?.title || 'Class';
-    const courseCode = lecture.course?.short_display_name ? ` (${lecture.course.short_display_name})` : '';
-
-    let slackMsg = `${salutation}\n\nI noticed an attendance discrepancy on the portal for *${courseTitle}${courseCode}* on *${dateStr}* (${timeStr}).\n\n• *Topic:* ${lecture.title}\n• *Current Portal Status:* \`${statusText}\`\n\nI was present in this session—could you please check and update my attendance in the ledger when you get a chance? Thank you! 🙏\n\n— *${studentName}*`;
-
-    if (isDemoMode) {
-      slackMsg += `\n\n> ⚠️ _(Simulated demo fixture — please ensure live LMS token is connected before sending.)_`;
-    }
+    const slackMsg = formatSlackTeacherMessage({
+      lecture,
+      studentProfile: profile,
+      honorific: teacherHonorific,
+      isDemoMode
+    });
 
     navigator.clipboard.writeText(slackMsg).then(() => {
-      setCopiedToast(`Copied Slack DM for ${firstName || 'professor'} to clipboard!`);
+      const recipientName = firstName ? `${firstName} ${teacherHonorific.toLowerCase()}` : teacherHonorific;
+      setCopiedToast(`Copied Slack message for ${recipientName}!`);
       setTimeout(() => setCopiedToast(''), 3000);
     }).catch(() => {
       alert("Could not access clipboard. Please copy manually:\n\n" + slackMsg);
@@ -1614,6 +1609,24 @@ export default function App() {
                     </option>
                   ))}
                 </select>
+
+                <div className="honorific-toggle-group" title="Choose salutation for copied Slack message">
+                  <span className="honorific-label">Salutation:</span>
+                  <button
+                    type="button"
+                    className={`honorific-toggle-btn ${teacherHonorific === 'Sir' ? 'active' : ''}`}
+                    onClick={() => setTeacherHonorific('Sir')}
+                  >
+                    Sir
+                  </button>
+                  <button
+                    type="button"
+                    className={`honorific-toggle-btn ${teacherHonorific === "Ma'am" ? 'active' : ''}`}
+                    onClick={() => setTeacherHonorific("Ma'am")}
+                  >
+                    Ma'am
+                  </button>
+                </div>
               </div>
 
               {/* Lecture List Table */}

@@ -1448,6 +1448,47 @@ kbd {
   color: #fff;
 }
 
+.honorific-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.35rem;
+}
+
+.honorific-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-left: 0.4rem;
+}
+
+.honorific-toggle-btn {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 0.22rem 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.honorific-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.honorific-toggle-btn.active {
+  background-color: var(--primary);
+  color: #fff;
+}
+
 .log-table-wrap {
   overflow-x: auto;
   border: 2px solid var(--border-color);
