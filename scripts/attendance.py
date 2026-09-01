@@ -14,7 +14,9 @@ import ssl
 import math
 
 BASE_URL = "https://my.newtonschool.co"
-TOKEN_FILE = os.path.join(os.path.dirname(__file__), ".token")
+_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+TOKEN_FILE = os.path.join(_ROOT_DIR, ".token") if os.path.exists(os.path.join(_ROOT_DIR, ".token")) else os.path.join(_SCRIPT_DIR, ".token")
 
 def get_token():
     if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):

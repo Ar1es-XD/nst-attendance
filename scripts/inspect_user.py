@@ -5,7 +5,9 @@ import json
 import ssl
 
 token = os.environ.get("NEWTON_TOKEN")
-token_path = os.path.join(os.path.dirname(__file__), ".token")
+_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+token_path = os.path.join(_ROOT_DIR, ".token") if os.path.exists(os.path.join(_ROOT_DIR, ".token")) else os.path.join(_SCRIPT_DIR, ".token")
 if not token and os.path.exists(token_path):
     with open(token_path, "r") as f:
         token = f.read().strip()

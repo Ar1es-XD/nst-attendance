@@ -69,14 +69,50 @@ A fast, modern web application and CLI tool that pulls real-time attendance dire
 You can also pull attendance right inside your terminal with zero dependencies:
 
 ```bash
-python3 attendance.py
+python3 scripts/attendance.py
 ```
 *(On first run, paste your token once. It saves to `.token` for instant future runs!)*
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🛠️ Tech Stack & Directory Structure
 
-* **Frontend:** React 19 + Vite 8
-* **Styling:** Vanilla CSS design system with HSL variables
-* **API Reverse Proxy:** Serverless route handler (`api/[...path].js`) and Vite proxy routing to `my.newtonschool.co/api/` without CORS.
+```text
+newt_att/
+├── scripts/                      # Standalone CLI tools & debug scripts
+│   ├── attendance.py             # Zero-dependency terminal attendance tracker
+│   ├── get_attendance.js         # Node CLI ledger runner
+│   ├── inspect_user.py           # LMS profile inspector
+│   └── test_subjects.py          # Course performance debugger
+├── src/
+│   ├── components/               # Modular UI components
+│   │   ├── AttendanceLog/        # Class Attendance Log tab & table
+│   │   │   └── AttendanceLogView.jsx
+│   │   ├── Dashboard/            # Core dashboard modules
+│   │   │   ├── BatchSimulator.jsx
+│   │   │   ├── CourseCard.jsx
+│   │   │   ├── CourseGrid.jsx
+│   │   │   ├── MetricTiles.jsx
+│   │   │   └── Toolbar.jsx
+│   │   ├── Layout/               # Shell layout components
+│   │   │   ├── DemoBanner.jsx
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── SectionTabs.jsx
+│   │   │   └── Ticker.jsx
+│   │   └── Modals/               # Modals & entry gateways
+│   │       └── ConnectView.jsx
+│   ├── services/
+│   │   └── lmsAdapter.js         # Isolated LMS API adapter layer
+│   ├── utils/
+│   │   ├── causationEngine.js    # Per-subject causation verification
+│   │   ├── formatters.js         # Date/time & ledger helpers
+│   │   └── slackMessageFormatter.js # Human-centric Slack DM generator
+│   ├── App.jsx                   # Lean application state orchestrator
+│   ├── index.css                 # Flat art design system
+│   └── main.jsx                  # React 19 bootstrap
+├── test/
+│   ├── causation.test.js         # Causation engine test suite
+│   └── slackFormatter.test.js    # Slack message formatter test suite
+├── package.json
+└── vite.config.js
+```
