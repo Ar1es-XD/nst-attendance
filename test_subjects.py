@@ -1,8 +1,19 @@
+import os
+import sys
 import urllib.request
 import json
 import ssl
 
-token = "9kWNDZN99CiyR5yDrpvHBNqUDgkTu0"
+token = os.environ.get("NEWTON_TOKEN")
+token_path = os.path.join(os.path.dirname(__file__), ".token")
+if not token and os.path.exists(token_path):
+    with open(token_path, "r") as f:
+        token = f.read().strip()
+
+if not token:
+    print("Error: No token found. Set NEWTON_TOKEN or save into .token file.")
+    sys.exit(1)
+
 BASE_URL = "https://my.newtonschool.co"
 
 ctx = ssl.create_default_context()

@@ -46,13 +46,21 @@ A fast, modern web application and CLI tool that pulls real-time attendance dire
 
 * **🔑 Direct Bearer Token & 🛰️ Network Interceptor:** Connect directly by pasting your Bearer token or by running the real-time DevTools network interceptor to auto-capture session credentials.
 * **📊 Comprehensive Subject Breakdown:** Automatically traverses active semesters (e.g. Semester 3 CS) and displays each subject's attendance, percentage, and health status.
-* **🛡️ Mathematical Planning Engine:**
-  * **Bunkable Classes:** Calculates how many classes you can safely miss while staying $\ge 75\%$.
-  * **Required Classes:** Calculates how many consecutive classes you must attend to recover if $< 75\%$.
+* **🛡️ Action Causation Verification Engine:**
+  * **Per-Subject Skippability:** Verifies mathematical causation rather than superficial aggregate buffer—identifying specifically which subjects have safe buffer without dropping below $T_{\text{target}}$.
+  * **Remaining Lecture Clamping:** Clamps bunkable count against actual scheduled lectures remaining so numbers reflect physical reality.
+  * **Restricted Subject Warnings:** Displays exact projected percentage drops (e.g. $83.3\% \to 71.4\%$) if an unsafe class is skipped.
+  * **Upcoming Lecture Advisory:** Correlates the immediate upcoming class with course buffer to advise whether it's safe to skip or must be attended.
+* **🗓️ Class Attendance Log (Teacher Reference Tab):**
+  * Displays full chronological history of conducted and upcoming classes with dates, exact times, lecture topics, course names, and instructor details.
+  * Quick status filters (`All`, `Missed Only`, `Attended`) and course filters.
+  * **1-Click "Copy for Teacher" Tool:** Generates formatted inquiry reference messages ready to send to faculty for attendance disputes.
+  * **Offline / Demo Safety Banner:** Prominently alerts and watermarks records when in simulated fixture mode to prevent citing demo dates to teachers.
 * **🔮 Simulation Mode:** Click `+` or `-` to simulate attending or missing upcoming classes and see projected stats in real time.
 * **📁 Custom Subject Groups:** Group multiple courses (e.g. Labs vs. Theory) and assign custom thresholds.
+* **🧩 Isolated API Adapter Layer:** Defensive adapter (`src/services/lmsAdapter.js`) separating the reverse-engineered LMS API from the UI.
+* **🧪 Automated Test Suite:** Native zero-dependency fixture test suite (`npm test`) covering boundary conditions, conflict detection, and clamping.
 * **🔒 Privacy-Focused:** Authentication tokens are stored exclusively in the user's local browser (`localStorage`) and never saved on external servers.
-* **📱 Fully Responsive & Dark Mode:** Designed with a curated HSL color palette and Google's Inter font.
 
 ---
 

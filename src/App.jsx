@@ -20,66 +20,27 @@ import {
   BookOpen,
   Sliders,
   CheckCircle2,
-  Code2
+  Code2,
+  Copy,
+  Calendar,
+  Clock,
+  Check,
+  X
 } from 'lucide-react';
-
-const API_BASE = "";
-
-// Realistic baseline demo data for previewing without credentials
-const DEMO_SEMESTERS = [
-  {
-    hash: 'u4fvf1rm9v2e',
-    title: "Newton School of Technology'25 (CS) (SVYASA) - Semester 3",
-    shortName: "S3 B'25-CS",
-    isActive: true,
-    learningUnits: [
-      { id: 1, hash: 'y4jra1o5yjcj', title: "Analysis and Design of Algorithms", short_display_name: 'ADA' },
-      { id: 2, hash: 'x3300pxoaayu', title: "Analysis and Design of Algorithms Lab 2", short_display_name: 'ADA Lab 2' },
-      { id: 3, hash: 'ar66n55tzlgl', title: "Advanced Programming", short_display_name: 'Advanced Programming' },
-      { id: 4, hash: '3d7pc6pq59so', title: "AI for Interdisciplinary Applications", short_display_name: 'AI - IA' },
-      { id: 5, hash: 'pqnjkav8dobe', title: "AI for Interdisciplinary Applications Lab", short_display_name: 'AI lab' },
-      { id: 6, hash: 'rw4p1qnhjcfn', title: "Advanced Programming Lab 2", short_display_name: 'AP Lab 2' },
-      { id: 7, hash: 'oojehllgsouk', title: "Calculus and linear Algebra for AI", short_display_name: 'Calculus and Algebra' },
-      { id: 8, hash: 'qobpbvdsyekt', title: "Data Engineering", short_display_name: 'Data Engineering' },
-      { id: 9, hash: 'onr65jwzgdgj', title: "Data Engineering Lab 2", short_display_name: 'DE Lab 2' },
-      { id: 10, hash: 'abqtra71lo83', title: "Calculus and linear Algebra for AI Lab 2", short_display_name: 'Maths-3 Lab 2' },
-      { id: 11, hash: 'pplfefkvvgtw', title: "YOGA 2", short_display_name: 'YOGA 2' }
-    ]
-  },
-  {
-    hash: 'c6ootz3nd2y8',
-    title: "Newton School of Technology'25 (CS) (SVYASA) - Semester 2",
-    shortName: "S2 B'25-CS",
-    isActive: false,
-    learningUnits: [
-      { id: 101, hash: 'lpy9ubdndi3h', title: "Data Structures & Algorithms", short_display_name: 'DSA' },
-      { id: 102, hash: 'ba5zr8ljtuei', title: "Web Application Programming", short_display_name: 'WAP' }
-    ]
-  }
-];
-
-const DEMO_PERFORMANCES = {
-  'u4fvf1rm9v2e': { total_lectures: 49, total_lectures_attended: 41 },
-  'y4jra1o5yjcj': { total_lectures: 5, total_lectures_attended: 5 },
-  'x3300pxoaayu': { total_lectures: 4, total_lectures_attended: 4 },
-  'ar66n55tzlgl': { total_lectures: 5, total_lectures_attended: 4 },
-  '3d7pc6pq59so': { total_lectures: 2, total_lectures_attended: 1 },
-  'pqnjkav8dobe': { total_lectures: 2, total_lectures_attended: 2 },
-  'rw4p1qnhjcfn': { total_lectures: 6, total_lectures_attended: 4 },
-  'oojehllgsouk': { total_lectures: 6, total_lectures_attended: 5 },
-  'qobpbvdsyekt': { total_lectures: 4, total_lectures_attended: 4 },
-  'onr65jwzgdgj': { total_lectures: 3, total_lectures_attended: 3 },
-  'abqtra71lo83': { total_lectures: 6, total_lectures_attended: 4 },
-  'pplfefkvvgtw': { total_lectures: 7, total_lectures_attended: 5 },
-  'c6ootz3nd2y8': { total_lectures: 80, total_lectures_attended: 68 }
-};
-
-const DEMO_PROFILE = {
-  first_name: 'NST',
-  last_name: 'Student',
-  email: 'student@newtonschool.co',
-  username: 'nst_cs25'
-};
+import {
+  fetchUserProfile,
+  fetchAppliedSemesters,
+  fetchCoursePerformance,
+  fetchCourseLectures,
+  DEMO_PROFILE,
+  DEMO_SEMESTERS,
+  DEMO_PERFORMANCES,
+  DEMO_LECTURES
+} from './services/lmsAdapter.js';
+import {
+  calculateSubjectMetrics,
+  verifyActionCausation
+} from './utils/causationEngine.js';
 
 export default function App() {
   // Check URL query parameter for ?token=... first, then localStorage
@@ -110,7 +71,18 @@ export default function App() {
   const [selectedSemesterHash, setSelectedSemesterHash] = useState('u4fvf1rm9v2e');
   const [semesterTitle, setSemesterTitle] = useState("Semester 3");
   const [subjectsData, setSubjectsData] = useState([]);
-  const [overallPerf, setOverallPerf] = useState({ total_lectures: 0, total_lectures_attended: 0 });
+  const [_overallPerf, setOverallPerf] = useState({ total_lectures: 0, total_lectures_attended: 0 });
+
+  // High-level navigation tab: 'workbook' | 'attendance-log'
+  const [activeSectionTab, setActiveSectionTab] = useState('workbook');
+
+  // Lectures state (timeline of conducted and upcoming classes)
+  const [lectures, setLectures] = useState([]);
+  const [lecturesLoading, setLecturesLoading] = useState(false);
+  const [lectureFilterStatus, setLectureFilterStatus] = useState('all'); // 'all' | 'attended' | 'missed'
+  const [lectureFilterCourse, setLectureFilterCourse] = useState('all');
+  const [lectureSearch, setLectureSearch] = useState('');
+  const [copiedToast, setCopiedToast] = useState('');
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,6 +141,7 @@ export default function App() {
     setSelectedSemesterHash('u4fvf1rm9v2e');
     setSemesterTitle("Newton School of Technology'25 (CS) (SVYASA) - Semester 3");
     setOverallPerf(DEMO_PERFORMANCES['u4fvf1rm9v2e']);
+    setLectures(DEMO_LECTURES);
 
     const demoSubjects = DEMO_SEMESTERS[0].learningUnits.map(unit => {
       const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
@@ -192,70 +165,30 @@ export default function App() {
     setError('');
     const cleanToken = authToken.replace(/^Bearer\s+/i, '').trim();
 
-    const headers = {
-      'Authorization': `Bearer ${cleanToken}`,
-      'Accept': 'application/json'
-    };
-
     try {
-      // 1. Fetch User Profile (/api/v1/user/me/)
-      const profRes = await fetch(`${API_BASE}/api/v1/user/me/`, { headers });
-      if (!profRes.ok) {
-        if (profRes.status === 401 || profRes.status === 403) {
-          throw new Error('Authentication expired (401 Unauthorized). Please paste a fresh Bearer token.');
-        }
-        throw new Error(`Profile request failed: HTTP ${profRes.status}`);
-      }
-      const profData = await profRes.json();
+      // 1. Fetch User Profile
+      const profData = await fetchUserProfile(cleanToken);
       setProfile(profData);
 
-      // 2. Fetch Applied Courses Hierarchy (/api/v2/course/all/applied/?pagination=false&completed=false)
-      const appliedRes = await fetch(`${API_BASE}/api/v2/course/all/applied/?pagination=false&completed=false`, { headers });
-      if (!appliedRes.ok) throw new Error('Failed to retrieve applied courses list.');
-      const appliedData = await appliedRes.json();
-
-      // Extract all semester admin units
-      const extractedSemesters = [];
+      // 2. Fetch Applied Courses Hierarchy
+      const extractedSemesters = await fetchAppliedSemesters(cleanToken);
       let activeSemHash = semHash || selectedSemesterHash || 'u4fvf1rm9v2e';
       let foundActiveUnits = [];
 
-      if (Array.isArray(appliedData)) {
-        for (const entry of appliedData) {
-          const adminUnits = entry.children_courses?.admin_unit_courses || [];
-          for (const unit of adminUnits) {
-            extractedSemesters.push({
-              hash: unit.hash,
-              title: unit.title || unit.short_display_name || unit.hash,
-              shortName: unit.short_display_name,
-              isActive: unit.is_active_admin_unit_course,
-              learningUnits: unit.learning_unit_courses || []
-            });
-
-            if (unit.hash === activeSemHash) {
-              setSemesterTitle(unit.title || unit.short_display_name);
-              foundActiveUnits = unit.learning_unit_courses || [];
-            }
-          }
-        }
-      }
-
-      if (extractedSemesters.length > 0 && foundActiveUnits.length === 0) {
-        const activeOne = extractedSemesters.find(s => s.isActive) || extractedSemesters[0];
-        activeSemHash = activeOne.hash;
-        setSemesterTitle(activeOne.title);
-        foundActiveUnits = activeOne.learningUnits || [];
+      const targetSem = extractedSemesters.find(s => s.hash === activeSemHash) || extractedSemesters.find(s => s.isActive) || extractedSemesters[0];
+      if (targetSem) {
+        activeSemHash = targetSem.hash;
+        setSemesterTitle(targetSem.title);
+        foundActiveUnits = targetSem.learningUnits || [];
       }
 
       setSemesters(extractedSemesters);
       setSelectedSemesterHash(activeSemHash);
 
-      // 3. Fetch Overall Semester Performance (/api/v2/course/h/{hash}/self_performance/)
+      // 3. Fetch Overall Semester Performance
       try {
-        const semPerfRes = await fetch(`${API_BASE}/api/v2/course/h/${activeSemHash}/self_performance/`, { headers });
-        if (semPerfRes.ok) {
-          const semPerf = await semPerfRes.json();
-          setOverallPerf(semPerf);
-        }
+        const semPerf = await fetchCoursePerformance(cleanToken, activeSemHash);
+        setOverallPerf(semPerf);
       } catch (err) {
         console.warn("Overall performance fetch error:", err);
       }
@@ -265,18 +198,15 @@ export default function App() {
         foundActiveUnits.map(async (unit, index) => {
           const subHash = unit.hash;
           try {
-            const pRes = await fetch(`${API_BASE}/api/v2/course/h/${subHash}/self_performance/`, { headers });
-            if (pRes.ok) {
-              const pData = await pRes.json();
-              return {
-                id: unit.id || index,
-                hash: subHash,
-                name: unit.title || unit.short_display_name || `Subject ${index + 1}`,
-                shortName: unit.short_display_name,
-                rawAttended: pData.total_lectures_attended ?? 0,
-                rawTotal: pData.total_lectures ?? 0
-              };
-            }
+            const pData = await fetchCoursePerformance(cleanToken, subHash);
+            return {
+              id: unit.id || index,
+              hash: subHash,
+              name: unit.title || unit.short_display_name || `Subject ${index + 1}`,
+              shortName: unit.short_display_name,
+              rawAttended: pData.total_lectures_attended ?? 0,
+              rawTotal: pData.total_lectures ?? 0
+            };
           } catch (e) {
             console.warn(`Failed to fetch performance for ${subHash}:`, e);
           }
@@ -292,6 +222,17 @@ export default function App() {
       );
 
       setSubjectsData(subjectsWithAttendance);
+
+      // 5. Fetch Full Lecture Attendance Ledger for Class Attendance Log & Next Lecture Advisory
+      try {
+        setLecturesLoading(true);
+        const lecs = await fetchCourseLectures(cleanToken, activeSemHash);
+        setLectures(lecs);
+      } catch (lecErr) {
+        console.warn("Lectures fetch warning:", lecErr);
+      } finally {
+        setLecturesLoading(false);
+      }
 
     } catch (err) {
       console.error(err);
@@ -317,6 +258,7 @@ export default function App() {
       if (selected) {
         setSemesterTitle(selected.title);
         setOverallPerf(DEMO_PERFORMANCES[newSemHash] || { total_lectures: 0, total_lectures_attended: 0 });
+        setLectures(DEMO_LECTURES);
         const demoSubs = selected.learningUnits.map(unit => {
           const perf = DEMO_PERFORMANCES[unit.hash] || { total_lectures: 0, total_lectures_attended: 0 };
           return {
@@ -358,37 +300,14 @@ export default function App() {
     setProfile(null);
     setSemesters([]);
     setSubjectsData([]);
+    setLectures([]);
     setAdjustments({});
     setError('');
   };
 
-  // Mathematical calculation engine
+  // Mathematical calculation engine (delegates to causationEngine)
   const calculateAttendanceStats = useCallback((attended, total, thresholdPercent) => {
-    const threshold = thresholdPercent / 100;
-    if (total === 0) return { percent: 0, status: 'safe', bunkable: 0, required: 0 };
-
-    const percent = (attended / total) * 100;
-
-    if (percent >= thresholdPercent) {
-      const bunkable = Math.floor((attended - threshold * total) / threshold);
-      return {
-        percent,
-        status: percent >= thresholdPercent + 5 ? 'safe' : 'warning',
-        bunkable: Math.max(0, bunkable),
-        required: 0
-      };
-    } else {
-      if (threshold >= 1) {
-        return { percent, status: 'danger', bunkable: 0, required: 999 };
-      }
-      const required = Math.ceil((threshold * total - attended) / (1 - threshold));
-      return {
-        percent,
-        status: 'danger',
-        bunkable: 0,
-        required: Math.max(0, required)
-      };
-    }
+    return calculateSubjectMetrics(attended, total, thresholdPercent);
   }, []);
 
   // Processed subjects with fine-grained simulation adjustments
@@ -400,7 +319,7 @@ export default function App() {
       const attended = Math.max(0, sub.rawAttended + (adj.adjAttended || 0));
       const total = Math.max(0, sub.rawTotal + (adj.adjTotal || 0));
 
-      const stats = calculateAttendanceStats(attended, total, targetThreshold);
+      const stats = calculateSubjectMetrics(attended, total, targetThreshold);
 
       return {
         ...sub,
@@ -412,31 +331,104 @@ export default function App() {
         ...stats
       };
     });
-  }, [subjectsData, adjustments, targetThreshold, calculateAttendanceStats]);
+  }, [subjectsData, adjustments, targetThreshold]);
 
-  // Overall aggregate summary metrics
-  const overallStats = useMemo(() => {
-    if (processedSubjects.length === 0) {
-      const att = overallPerf.total_lectures_attended ?? 0;
-      const tot = overallPerf.total_lectures ?? 0;
-      return { attended: att, total: tot, ...calculateAttendanceStats(att, tot, targetThreshold) };
+  // Causation verification report with per-subject buffer clamping and upcoming lecture advisory
+  const causationReport = useMemo(() => {
+    const upcoming = lectures.filter(l => l.attended === null);
+    return verifyActionCausation({
+      subjects: processedSubjects,
+      targetThreshold,
+      upcomingLectures: upcoming
+    });
+  }, [processedSubjects, targetThreshold, lectures]);
+
+  const overallStats = causationReport.aggregate;
+
+  // Filtered lectures for Class Attendance Log tab
+  const filteredLectures = useMemo(() => {
+    return lectures.filter(lec => {
+      if (lectureFilterStatus === 'attended' && lec.attended !== true) return false;
+      if (lectureFilterStatus === 'missed' && lec.attended !== false) return false;
+
+      if (lectureFilterCourse !== 'all' && lec.course?.hash !== lectureFilterCourse) return false;
+
+      if (lectureSearch.trim()) {
+        const q = lectureSearch.toLowerCase();
+        const titleMatch = (lec.title || '').toLowerCase().includes(q);
+        const courseMatch = (lec.course?.title || '').toLowerCase().includes(q) || (lec.course?.short_display_name || '').toLowerCase().includes(q);
+        const instMatch = `${lec.instructor_user?.first_name || ''} ${lec.instructor_user?.last_name || ''}`.toLowerCase().includes(q);
+        if (!titleMatch && !courseMatch && !instMatch) return false;
+      }
+
+      return true;
+    });
+  }, [lectures, lectureFilterStatus, lectureFilterCourse, lectureSearch]);
+
+  const lectureMetrics = useMemo(() => {
+    let attendedCount = 0;
+    let missedCount = 0;
+    lectures.forEach(l => {
+      if (l.attended === true) attendedCount++;
+      else if (l.attended === false) missedCount++;
+    });
+    return {
+      total: lectures.length,
+      attended: attendedCount,
+      missed: missedCount
+    };
+  }, [lectures]);
+
+  const formatLectureDateTime = (isoStart, isoEnd) => {
+    if (!isoStart) return { dateStr: 'Date TBA', timeStr: '' };
+    try {
+      const start = new Date(isoStart);
+      const dateStr = start.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      const startTimeStr = start.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      let timeStr = startTimeStr;
+      if (isoEnd) {
+        const end = new Date(isoEnd);
+        const endTimeStr = end.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        timeStr = `${startTimeStr} – ${endTimeStr}`;
+      }
+      return { dateStr, timeStr };
+    } catch {
+      return { dateStr: isoStart, timeStr: '' };
+    }
+  };
+
+  const handleCopyForTeacher = (lecture) => {
+    const { dateStr, timeStr } = formatLectureDateTime(lecture.start_timestamp, lecture.end_timestamp);
+    const instructor = `${lecture.instructor_user?.first_name || ''} ${lecture.instructor_user?.last_name || ''}`.trim() || 'Instructor';
+    const statusText = lecture.attended ? 'Marked Attended' : 'Marked Absent / Non-Attended';
+    
+    let inquiry = `Dear ${instructor},\n\nI am writing to inquire regarding my attendance record for the following session:\n• Course: ${lecture.course?.title} (${lecture.course?.short_display_name})\n• Date & Time: ${dateStr} (${timeStr})\n• Lecture Topic: ${lecture.title}\n• Status in LMS: ${statusText}\n\nCould you please help verify my attendance in the attendance ledger? Thank you!\n\nBest regards,\n${profile?.first_name || 'Student'} ${profile?.last_name || ''} (${profile?.email || profile?.username || ''})`;
+
+    if (isDemoMode) {
+      inquiry += `\n\n[NOTICE: This is simulated offline fixture data. Please re-authenticate your live session before emailing faculty.]`;
     }
 
-    let sumAttended = 0;
-    let sumTotal = 0;
-
-    processedSubjects.forEach(s => {
-      sumAttended += s.attended;
-      sumTotal += s.total;
+    navigator.clipboard.writeText(inquiry).then(() => {
+      setCopiedToast(`Copied inquiry template for ${instructor}!`);
+      setTimeout(() => setCopiedToast(''), 3000);
+    }).catch(() => {
+      alert("Could not access clipboard. Please copy manually:\n\n" + inquiry);
     });
-
-    const stats = calculateAttendanceStats(sumAttended, sumTotal, targetThreshold);
-    return {
-      attended: sumAttended,
-      total: sumTotal,
-      ...stats
-    };
-  }, [processedSubjects, overallPerf, targetThreshold, calculateAttendanceStats]);
+  };
 
   // Simulation Adjustment Handlers
   const adjustSubjectAttendance = (subjectHash, type, delta) => {
@@ -851,6 +843,17 @@ export default function App() {
            AUTHENTICATED COMMAND CENTER (Flat Art Course Workbook Dashboard)
            ========================================================================== */
         <div>
+          {/* OFFLINE / DEMO DATA ACTIVE BANNER */}
+          {isDemoMode && (
+            <div className="demo-mode-alert-banner">
+              <AlertTriangle size={20} color="var(--destructive)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong>DEMO / SIMULATED DATA ACTIVE:</strong> You are currently viewing offline baseline fixture data. 
+                Do not cite these class dates, topics, or attendance records in teacher inquiries until a live LMS session is connected.
+              </div>
+            </div>
+          )}
+
           {/* Top Intelligence Toolbar */}
           <div className="toolbar-panel">
             <div className="toolbar-group">
@@ -944,7 +947,7 @@ export default function App() {
               </span>
             </div>
 
-            {/* Tile 2: Net Action Verdict */}
+            {/* Tile 2: Net Action Verdict & Causation Engine */}
             <div className="metric-tile">
               <div className="metric-top-row">
                 <div className="metric-label-group">
@@ -961,12 +964,65 @@ export default function App() {
                   }
                 </span>
               </div>
-              <span className="metric-note">
-                {overallStats.percent >= targetThreshold
-                  ? `+${(overallStats.percent - targetThreshold).toFixed(1)}% buffer · Safe to skip ${overallStats.bunkable} ${overallStats.bunkable === 1 ? 'lecture' : 'lectures'} while staying ≥ ${targetThreshold}%`
-                  : `Need +${(targetThreshold - overallStats.percent).toFixed(1)}% · Must attend ${overallStats.required} consecutive ${overallStats.required === 1 ? 'lecture' : 'lectures'} to reach ${targetThreshold}%`
-                }
-              </span>
+
+              {/* Causation Verification & Skippable Class Identification */}
+              <div className="causation-block">
+                {overallStats.percent >= targetThreshold ? (
+                  <>
+                    {causationReport.safeSubjects.length > 0 && (
+                      <div>
+                        <div className="causation-section-title">Verified Safe to Skip (Buffer):</div>
+                        <div className="causation-pills-row">
+                          {causationReport.safeSubjects.map(s => (
+                            <span key={s.hash} className="causation-pill safe" title={`Current: ${s.currentPercent.toFixed(1)}%, If 1 missed: ${s.projectedPercentIfSkipped.toFixed(1)}%`}>
+                              ✓ {s.shortName} (+{s.bunkable} safe)
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {causationReport.restrictedSubjects.filter(s => !s.hasZeroLectures).length > 0 && (
+                      <div style={{ marginTop: '0.2rem' }}>
+                        <div className="causation-section-title">Restricted (Avoid Skipping):</div>
+                        <div className="causation-pills-row">
+                          {causationReport.restrictedSubjects.filter(s => !s.hasZeroLectures).slice(0, 3).map(s => (
+                            <span key={s.hash} className="causation-pill restricted" title={`Skipping drops this course by ${s.projectedDrop.toFixed(1)}% to ${s.projectedPercentIfSkipped.toFixed(1)}%`}>
+                              ✕ {s.shortName} ({s.currentPercent.toFixed(1)}% → {s.projectedPercentIfSkipped.toFixed(1)}%)
+                            </span>
+                          ))}
+                          {causationReport.restrictedSubjects.filter(s => !s.hasZeroLectures).length > 3 && (
+                            <span className="causation-pill restricted" style={{ fontSize: '0.7rem' }}>
+                              +{causationReport.restrictedSubjects.filter(s => !s.hasZeroLectures).length - 3} more restricted
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="causation-section-title">Deficit Causation Drivers:</div>
+                    <div className="causation-pills-row">
+                      {causationReport.deficitDrivers.map(d => (
+                        <span key={d.hash} className="causation-pill deficit">
+                          ⚠️ {d.shortName}: {d.currentPercent.toFixed(1)}% (needs +{d.required} classes)
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <div className="causation-summary-text">
+                  {causationReport.causationSummary}
+                </div>
+
+                {causationReport.nextLectureAdvisory && (
+                  <div className={`next-lecture-advisory ${causationReport.nextLectureAdvisory.isSafeToSkip ? 'safe' : 'unsafe'}`}>
+                    <strong>Next Class:</strong> {causationReport.nextLectureAdvisory.courseShortName} — {causationReport.nextLectureAdvisory.message}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Tile 3: Attendance Ratio */}
@@ -1055,8 +1111,29 @@ export default function App() {
             </div>
           </div>
 
-          {/* Search, Filter & View Controls */}
-          <div className="filter-search-row">
+          {/* Main Navigation Tabs: Course Workbook vs Class Attendance Log */}
+          <div className="section-tabs-bar">
+            <button
+              className={`section-tab-btn ${activeSectionTab === 'workbook' ? 'active' : ''}`}
+              onClick={() => setActiveSectionTab('workbook')}
+            >
+              <BookOpen size={16} />
+              <span>📚 Course Workbook & Simulator</span>
+            </button>
+            <button
+              className={`section-tab-btn ${activeSectionTab === 'attendance-log' ? 'active' : ''}`}
+              onClick={() => setActiveSectionTab('attendance-log')}
+            >
+              <CheckCircle2 size={16} />
+              <span>🗓️ Class Attendance Log (Teacher Reference)</span>
+              <span className="tab-counter-badge">{lectures.length}</span>
+            </button>
+          </div>
+
+          {activeSectionTab === 'workbook' ? (
+            <>
+              {/* Search, Filter & View Controls */}
+              <div className="filter-search-row">
             <div className="search-field-box">
               <Search size={16} color="var(--text-muted)" />
               <input
@@ -1443,6 +1520,217 @@ export default function App() {
 
             </div>
           </div>
+            </>
+          ) : (
+            /* ==========================================================================
+               CLASS ATTENDANCE LOG (Teacher Reference Tab)
+               ========================================================================== */
+            <div className="attendance-log-container">
+              <div className="log-header-cluster">
+                <div className="log-title-area">
+                  <h3>Verified Lecture Attendance Ledger</h3>
+                  <p>
+                    Full chronological record of enrolled classes, timestamps, topics, and faculty for syllabus tracking and dispute references.
+                  </p>
+                </div>
+
+                <div className="log-stats-bar">
+                  <div className="log-stat-chip">
+                    <span>Total Classes:</span>
+                    <span className="num">{lectureMetrics.total}</span>
+                  </div>
+                  <div className="log-stat-chip" style={{ borderColor: 'var(--status-green)' }}>
+                    <span className="status-dot green"></span>
+                    <span>Attended:</span>
+                    <span className="num" style={{ color: 'var(--status-green)' }}>{lectureMetrics.attended}</span>
+                  </div>
+                  <div className="log-stat-chip" style={{ borderColor: 'var(--destructive)' }}>
+                    <span className="status-dot red"></span>
+                    <span>Missed:</span>
+                    <span className="num" style={{ color: 'var(--destructive)' }}>{lectureMetrics.missed}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Log Filters & Search Bar */}
+              <div className="log-controls-row">
+                <div className="log-search-box">
+                  <Search size={16} color="var(--text-muted)" />
+                  <input
+                    type="text"
+                    placeholder="Search by lecture topic or instructor..."
+                    value={lectureSearch}
+                    onChange={(e) => setLectureSearch(e.target.value)}
+                  />
+                  {lectureSearch && (
+                    <button
+                      onClick={() => setLectureSearch('')}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="log-filter-pills">
+                  <button
+                    className={`log-filter-pill-btn ${lectureFilterStatus === 'all' ? 'active' : ''}`}
+                    onClick={() => setLectureFilterStatus('all')}
+                  >
+                    All ({lectureMetrics.total})
+                  </button>
+                  <button
+                    className={`log-filter-pill-btn ${lectureFilterStatus === 'missed' ? 'active' : ''}`}
+                    onClick={() => setLectureFilterStatus('missed')}
+                    style={lectureFilterStatus === 'missed' ? { backgroundColor: 'var(--destructive)', borderColor: 'var(--destructive)' } : {}}
+                  >
+                    Missed / Absent ({lectureMetrics.missed})
+                  </button>
+                  <button
+                    className={`log-filter-pill-btn ${lectureFilterStatus === 'attended' ? 'active' : ''}`}
+                    onClick={() => setLectureFilterStatus('attended')}
+                    style={lectureFilterStatus === 'attended' ? { backgroundColor: 'var(--status-green)', borderColor: 'var(--status-green)' } : {}}
+                  >
+                    Attended ({lectureMetrics.attended})
+                  </button>
+                </div>
+
+                <select
+                  className="art-select"
+                  value={lectureFilterCourse}
+                  onChange={(e) => setLectureFilterCourse(e.target.value)}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 0.8rem' }}
+                >
+                  <option value="all">All Subjects</option>
+                  {processedSubjects.map(s => (
+                    <option key={s.hash} value={s.hash}>
+                      {s.shortName || s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Lecture List Table */}
+              {lecturesLoading ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <RefreshCw size={24} className="spin" style={{ margin: '0 auto 1rem' }} />
+                  <p>Retrieving full lecture history from Newton School LMS...</p>
+                </div>
+              ) : filteredLectures.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem 1.5rem', color: 'var(--text-muted)' }}>
+                  <Calendar size={36} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+                  <h4 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.3rem' }}>No Lecture Records Match Filters</h4>
+                  <p style={{ fontSize: '0.86rem' }}>Try clearing your search query or switching to another status tab.</p>
+                </div>
+              ) : (
+                <div className="log-table-wrap">
+                  <table className="lecture-log-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '190px' }}>Date & Time</th>
+                        <th style={{ width: '180px' }}>Course / Subject</th>
+                        <th>Lecture Topic</th>
+                        <th style={{ width: '160px' }}>Instructor</th>
+                        <th style={{ width: '120px' }}>LMS Status</th>
+                        <th style={{ width: '150px', textAlign: 'right' }}>Faculty Dispute</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLectures.map(lecture => {
+                        const { dateStr, timeStr } = formatLectureDateTime(lecture.start_timestamp, lecture.end_timestamp);
+                        const instName = `${lecture.instructor_user?.first_name || ''} ${lecture.instructor_user?.last_name || ''}`.trim() || 'Staff Faculty';
+
+                        return (
+                          <tr key={lecture.hash || lecture.id}>
+                            <td>
+                              <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{dateStr}</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{timeStr}</div>
+                            </td>
+                            <td>
+                              <span className="tag-badge terracotta" style={{ fontSize: '0.72rem', marginBottom: '0.2rem' }}>
+                                {lecture.course?.short_display_name || 'Course'}
+                              </span>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
+                                {lecture.course?.title}
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                                {lecture.title}
+                              </div>
+                              {lecture.whiteboard_file && (
+                                <a
+                                  href={lecture.whiteboard_file}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ fontSize: '0.72rem', color: 'var(--primary)', textDecoration: 'underline', marginTop: '0.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                >
+                                  <span>Whiteboard Notes</span>
+                                  <ExternalLink size={10} />
+                                </a>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                {lecture.instructor_user?.instructor_avatar ? (
+                                  <img
+                                    src={lecture.instructor_user.instructor_avatar}
+                                    alt={instName}
+                                    style={{ width: '22px', height: '22px', borderRadius: '50%' }}
+                                  />
+                                ) : (
+                                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
+                                    {instName.charAt(0)}
+                                  </div>
+                                )}
+                                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{instName}</span>
+                              </div>
+                            </td>
+                            <td>
+                              {lecture.attended === true ? (
+                                <span className="lecture-status-badge attended">
+                                  <Check size={12} />
+                                  <span>Attended</span>
+                                </span>
+                              ) : lecture.attended === false ? (
+                                <span className="lecture-status-badge missed">
+                                  <X size={12} />
+                                  <span>Absent</span>
+                                </span>
+                              ) : (
+                                <span className="lecture-status-badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
+                                  <Clock size={12} />
+                                  <span>Upcoming</span>
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="btn-copy-teacher"
+                                onClick={() => handleCopyForTeacher(lecture)}
+                                title="Copy formatted dispute reference message to ask teacher"
+                              >
+                                <Copy size={12} />
+                                <span>Copy for Teacher</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {copiedToast && (
+        <div className="toast-message">
+          <Check size={16} color="var(--status-green)" />
+          <span>{copiedToast}</span>
         </div>
       )}
     </div>
