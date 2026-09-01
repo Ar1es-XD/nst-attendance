@@ -83,12 +83,12 @@ body {
 .app-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 5rem;
+  padding: 1.25rem 1.25rem 3.5rem;
 }
 
 @media (max-width: 640px) {
   .app-container {
-    padding: 1rem 1rem 3.5rem;
+    padding: 0.85rem 0.85rem 2.5rem;
   }
 }
 
@@ -111,8 +111,8 @@ body {
    STATUS INDICATOR DOTS & TAGS
    ========================================================================== */
 .status-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--radius-pill);
   display: inline-block;
   flex-shrink: 0;
@@ -126,11 +126,11 @@ body {
 .tag-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-pixel);
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -185,8 +185,8 @@ body {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-pill);
-  padding: 0.65rem 0;
-  margin-bottom: 2rem;
+  padding: 0.45rem 0;
+  margin-bottom: 1.15rem;
   display: flex;
   white-space: nowrap;
 }
@@ -206,15 +206,15 @@ body {
 .ticker-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.84rem;
+  gap: 0.55rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .ticker-item .pixel-tag {
   font-family: var(--font-pixel);
-  font-size: 0.56rem;
+  font-size: 0.54rem;
   color: var(--primary);
 }
 
@@ -230,11 +230,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.6rem;
+  padding: 0.75rem 1.25rem;
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  margin-bottom: 2rem;
+  margin-bottom: 1.15rem;
 }
 
 .nav-brand-group {
@@ -387,7 +387,7 @@ body {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  padding: 1.6rem;
+  padding: 1.15rem 1.25rem;
   transition: border-color var(--transition-normal);
   position: relative;
 }
@@ -400,21 +400,21 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .art-card-title {
   font-family: var(--font-display);
-  font-size: 1.22rem;
+  font-size: 1.08rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
 .art-card-subtitle {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
 }
 
 /* ==========================================================================
@@ -572,18 +572,18 @@ kbd {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 1.2rem;
-  padding: 1.2rem 1.6rem;
+  gap: 0.85rem;
+  padding: 0.75rem 1.25rem;
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  margin-bottom: 2rem;
+  margin-bottom: 1.15rem;
 }
 
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -593,8 +593,8 @@ kbd {
   color: var(--text-primary);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.88rem;
-  padding: 0.55rem 1.1rem;
+  font-size: 0.84rem;
+  padding: 0.42rem 0.9rem;
   border-radius: var(--radius-button);
   outline: none;
   cursor: pointer;
@@ -609,27 +609,27 @@ kbd {
 .target-slider-box {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.65rem;
   background-color: var(--bg-muted);
   border: 2px solid var(--border-color);
-  padding: 0.45rem 1rem;
+  padding: 0.35rem 0.8rem;
   border-radius: var(--radius-button);
 }
 
 .target-slider-number {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.92rem;
   color: var(--primary);
-  min-width: 48px;
+  min-width: 42px;
   text-align: right;
 }
 
 .art-range-input {
   -webkit-appearance: none;
   appearance: none;
-  width: 110px;
-  height: 6px;
+  width: 100px;
+  height: 5px;
   background: var(--border-color);
   border-radius: var(--radius-pill);
   outline: none;
@@ -639,8 +639,8 @@ kbd {
 .art-range-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-pill);
   background: var(--primary);
   cursor: pointer;
@@ -653,14 +653,14 @@ kbd {
 
 .preset-pills-cluster {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .preset-pill-btn {
-  padding: 0.35rem 0.75rem;
+  padding: 0.28rem 0.65rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   background-color: var(--bg-muted);
   border: 2px solid var(--border-color);
@@ -686,8 +686,8 @@ kbd {
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(1, 1fr);
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  gap: 0.9rem;
+  margin-bottom: 1.15rem;
 }
 
 @media (min-width: 600px) {
@@ -698,7 +698,7 @@ kbd {
 
 @media (min-width: 1040px) {
   .metrics-grid {
-    grid-template-columns: 1.3fr 1.3fr 1fr 1fr;
+    grid-template-columns: 1.2fr 1.3fr 1fr 1fr;
   }
 }
 
@@ -706,7 +706,7 @@ kbd {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  padding: 1.5rem;
+  padding: 1rem 1.15rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -721,14 +721,14 @@ kbd {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.45rem;
 }
 
 .metric-label-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.84rem;
+  gap: 0.4rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -738,23 +738,23 @@ kbd {
 .metric-number-row {
   display: flex;
   align-items: baseline;
-  gap: 0.75rem;
-  margin-bottom: 0.4rem;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
 }
 
 .metric-large-val {
   font-family: var(--font-display);
-  font-size: 2.6rem;
+  font-size: 1.85rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.05;
   color: var(--text-primary);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .metric-note {
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 /* ==========================================================================
@@ -764,25 +764,25 @@ kbd {
   background-color: var(--bg-muted);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  padding: 1.3rem 1.6rem;
-  margin-bottom: 2rem;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.15rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .batch-info-cluster {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .batch-actions-cluster {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
 }
 
@@ -793,21 +793,21 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.75rem;
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
   flex-wrap: wrap;
 }
 
 .search-field-box {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-button);
-  padding: 0.55rem 1.1rem;
+  padding: 0.42rem 0.9rem;
   flex: 1;
-  max-width: 440px;
+  max-width: 420px;
   transition: border-color var(--transition-fast);
 }
 
@@ -820,7 +820,7 @@ kbd {
   border: none;
   outline: none;
   font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--text-primary);
   width: 100%;
 }
@@ -828,15 +828,15 @@ kbd {
 .filter-tabs-cluster {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   overflow-x: auto;
 }
 
 .filter-tab {
-  padding: 0.45rem 0.95rem;
+  padding: 0.35rem 0.8rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-body);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
@@ -844,7 +844,7 @@ kbd {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   transition: all var(--transition-fast);
 }
 
@@ -866,9 +866,9 @@ kbd {
 
 .filter-num {
   font-family: var(--font-display);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.1rem 0.45rem;
+  padding: 0.08rem 0.4rem;
   border-radius: var(--radius-pill);
   background-color: var(--bg-muted);
   color: var(--text-muted);
@@ -880,7 +880,7 @@ kbd {
 .main-course-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.75rem;
+  gap: 1.25rem;
 }
 
 @media (min-width: 1040px) {
@@ -892,7 +892,7 @@ kbd {
 .courses-stream {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 @media (min-width: 680px) {
@@ -905,11 +905,11 @@ kbd {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  padding: 1.5rem;
+  padding: 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1.1rem;
+  gap: 0.85rem;
   transition: border-color var(--transition-normal);
 }
 
@@ -921,12 +921,12 @@ kbd {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .course-name-heading {
   font-family: var(--font-display);
-  font-size: 1.12rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.35;
@@ -939,14 +939,14 @@ kbd {
 
 .rate-big-pct {
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .rate-fraction-text {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
   margin-top: 0.3rem;
 }
@@ -1170,12 +1170,12 @@ kbd {
   background-color: hsl(38, 92%, 94%);
   border: 2px solid hsl(38, 92%, 50%);
   border-radius: var(--radius-button);
-  padding: 0.85rem 1.25rem;
-  margin-bottom: 1.5rem;
+  padding: 0.65rem 1.15rem;
+  margin-bottom: 1.15rem;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  font-size: 0.86rem;
+  gap: 0.75rem;
+  font-size: 0.84rem;
   color: hsl(30, 80%, 25%);
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
@@ -1190,23 +1190,23 @@ kbd {
    ========================================================================== */
 .section-tabs-bar {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.75rem;
+  gap: 0.6rem;
+  margin-bottom: 1.15rem;
   border-bottom: 2px solid var(--border-color);
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
   overflow-x: auto;
 }
 
 .section-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-button);
-  padding: 0.65rem 1.15rem;
+  padding: 0.5rem 1rem;
   font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--text-muted);
   cursor: pointer;
@@ -1223,7 +1223,7 @@ kbd {
   background-color: var(--primary);
   border-color: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(191, 47, 31, 0.25);
+  box-shadow: 0 3px 10px rgba(191, 47, 31, 0.22);
 }
 
 .tab-counter-badge {
@@ -1233,9 +1233,9 @@ kbd {
   background-color: var(--bg-muted);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.15rem 0.5rem;
+  padding: 0.12rem 0.45rem;
   border-radius: var(--radius-pill);
 }
 
@@ -1248,16 +1248,16 @@ kbd {
    CAUSATION VERDICT EXTENSIONS (Inside Action Verdict Tile)
    ========================================================================== */
 .causation-block {
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
   border-top: 1px dashed var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .causation-section-title {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1267,17 +1267,17 @@ kbd {
 .causation-pills-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .causation-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 0.2rem 0.55rem;
+  padding: 0.15rem 0.45rem;
   border-radius: var(--radius-badge);
 }
 
@@ -1300,20 +1300,20 @@ kbd {
 }
 
 .causation-summary-text {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  line-height: 1.4;
-  margin-top: 0.2rem;
+  line-height: 1.35;
+  margin-top: 0.15rem;
 }
 
 .next-lecture-advisory {
   background-color: var(--bg-muted);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-badge);
-  padding: 0.45rem 0.65rem;
-  margin-top: 0.4rem;
-  font-size: 0.78rem;
-  line-height: 1.35;
+  padding: 0.35rem 0.55rem;
+  margin-top: 0.25rem;
+  font-size: 0.74rem;
+  line-height: 1.3;
 }
 
 .next-lecture-advisory strong {
@@ -1335,7 +1335,7 @@ kbd {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-card);
-  padding: 1.75rem;
+  padding: 1.25rem 1.4rem;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 
@@ -1344,69 +1344,69 @@ kbd {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
   border-bottom: 2px solid var(--border-color);
 }
 
 .log-title-area h3 {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .log-title-area p {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
 .log-stats-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
 }
 
 .log-stat-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   background-color: var(--bg-muted);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-pill);
-  padding: 0.35rem 0.85rem;
-  font-size: 0.82rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .log-stat-chip .num {
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: var(--primary);
 }
 
 .log-controls-row {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .log-search-box {
   flex: 1;
-  min-width: 240px;
+  min-width: 220px;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
   background-color: var(--bg-canvas);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-button);
-  padding: 0.55rem 0.9rem;
+  padding: 0.42rem 0.85rem;
 }
 
 .log-search-box input {
@@ -1415,13 +1415,13 @@ kbd {
   background: transparent;
   outline: none;
   font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   color: var(--text-primary);
 }
 
 .log-filter-pills {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
 }
 
@@ -1429,8 +1429,8 @@ kbd {
   background: var(--bg-surface);
   border: 2px solid var(--border-color);
   border-radius: var(--radius-pill);
-  padding: 0.35rem 0.85rem;
-  font-size: 0.8rem;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--text-muted);
   cursor: pointer;
@@ -1458,14 +1458,14 @@ kbd {
 .lecture-log-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
 }
 
 .lecture-log-table th {
   background-color: var(--bg-muted);
   text-align: left;
-  padding: 0.75rem 1rem;
-  font-size: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1474,7 +1474,7 @@ kbd {
 }
 
 .lecture-log-table td {
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -1490,11 +1490,11 @@ kbd {
 .lecture-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.25rem 0.65rem;
+  padding: 0.2rem 0.55rem;
   border-radius: var(--radius-pill);
   text-transform: uppercase;
 }
@@ -1514,12 +1514,12 @@ kbd {
 .btn-copy-teacher {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   background-color: var(--bg-surface);
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-button);
-  padding: 0.35rem 0.7rem;
-  font-size: 0.76rem;
+  padding: 0.32rem 0.65rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -1535,13 +1535,13 @@ kbd {
 
 .toast-message {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: 1.5rem;
+  right: 1.5rem;
   background-color: var(--text-primary);
   color: #fff;
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1.1rem;
   border-radius: var(--radius-button);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   display: flex;

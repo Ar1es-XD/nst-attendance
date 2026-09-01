@@ -413,20 +413,26 @@ export default function App() {
 
   const handleCopyForTeacher = (lecture) => {
     const { dateStr, timeStr } = formatLectureDateTime(lecture.start_timestamp, lecture.end_timestamp);
-    const instructor = `${lecture.instructor_user?.first_name || ''} ${lecture.instructor_user?.last_name || ''}`.trim() || 'Instructor';
-    const statusText = lecture.attended ? 'Marked Attended' : 'Marked Absent / Non-Attended';
-    
-    let inquiry = `Dear ${instructor},\n\nI am writing to inquire regarding my attendance record for the following session:\n• Course: ${lecture.course?.title} (${lecture.course?.short_display_name})\n• Date & Time: ${dateStr} (${timeStr})\n• Lecture Topic: ${lecture.title}\n• Status in LMS: ${statusText}\n\nCould you please help verify my attendance in the attendance ledger? Thank you!\n\nBest regards,\n${profile?.first_name || 'Student'} ${profile?.last_name || ''} (${profile?.email || profile?.username || ''})`;
+    const firstName = lecture.instructor_user?.first_name ? lecture.instructor_user.first_name.trim() : '';
+    const salutation = firstName ? `Hi ${firstName} Sir/Ma'am,` : `Hi Sir/Ma'am,`;
+    const statusText = lecture.attended ? 'Attended' : 'Marked Absent';
+    const studentName = profile?.first_name 
+      ? `${profile.first_name} ${profile.last_name || ''}`.trim() 
+      : 'Student';
+    const courseTitle = lecture.course?.title || 'Class';
+    const courseCode = lecture.course?.short_display_name ? ` (${lecture.course.short_display_name})` : '';
+
+    let slackMsg = `${salutation}\n\nI noticed an attendance discrepancy on the portal for *${courseTitle}${courseCode}* on *${dateStr}* (${timeStr}).\n\n• *Topic:* ${lecture.title}\n• *Current Portal Status:* \`${statusText}\`\n\nI was present in this session—could you please check and update my attendance in the ledger when you get a chance? Thank you! 🙏\n\n— *${studentName}*`;
 
     if (isDemoMode) {
-      inquiry += `\n\n[NOTICE: This is simulated offline fixture data. Please re-authenticate your live session before emailing faculty.]`;
+      slackMsg += `\n\n> ⚠️ _(Simulated demo fixture — please ensure live LMS token is connected before sending.)_`;
     }
 
-    navigator.clipboard.writeText(inquiry).then(() => {
-      setCopiedToast(`Copied inquiry template for ${instructor}!`);
+    navigator.clipboard.writeText(slackMsg).then(() => {
+      setCopiedToast(`Copied Slack DM for ${firstName || 'professor'} to clipboard!`);
       setTimeout(() => setCopiedToast(''), 3000);
     }).catch(() => {
-      alert("Could not access clipboard. Please copy manually:\n\n" + inquiry);
+      alert("Could not access clipboard. Please copy manually:\n\n" + slackMsg);
     });
   };
 
@@ -1035,7 +1041,7 @@ export default function App() {
                 <Calculator size={18} color="var(--text-muted)" />
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val font-mono">{overallStats.attended} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
+                <span className="metric-large-val font-mono">{overallStats.attended} <span style={{ fontSize: '1.05rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {overallStats.total}</span></span>
               </div>
               <span className="metric-note">
                 Total lectures attended across all enrolled subjects
@@ -1052,7 +1058,7 @@ export default function App() {
                 <Layers size={18} color="var(--tag-gold)" />
               </div>
               <div className="metric-number-row">
-                <span className="metric-large-val font-mono">{healthStats.safeCount} <span style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
+                <span className="metric-large-val font-mono">{healthStats.safeCount} <span style={{ fontSize: '1.05rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {healthStats.total}</span></span>
                 <span className="tag-badge green">SAFE</span>
               </div>
               <span className="metric-note">
@@ -1632,7 +1638,7 @@ export default function App() {
                         <th>Lecture Topic</th>
                         <th style={{ width: '160px' }}>Instructor</th>
                         <th style={{ width: '120px' }}>LMS Status</th>
-                        <th style={{ width: '150px', textAlign: 'right' }}>Faculty Dispute</th>
+                        <th style={{ width: '150px', textAlign: 'right' }}>Slack Message</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1708,10 +1714,10 @@ export default function App() {
                               <button
                                 className="btn-copy-teacher"
                                 onClick={() => handleCopyForTeacher(lecture)}
-                                title="Copy formatted dispute reference message to ask teacher"
+                                title="Copy formatted Slack DM message for professor"
                               >
                                 <Copy size={12} />
-                                <span>Copy for Teacher</span>
+                                <span>Copy Slack DM</span>
                               </button>
                             </td>
                           </tr>
