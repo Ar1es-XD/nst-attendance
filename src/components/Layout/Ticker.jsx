@@ -23,8 +23,8 @@ export default function Ticker({ overallStats, targetThreshold, processedSubject
         </div>
 
         {/* Dynamic Subject Status Stream */}
-        {subjectsList.map(sub => (
-          <div key={sub.hash} className="ticker-item">
+        {subjectsList.map((sub, index) => (
+          <div key={`ticker-a-${sub.hash || index}-${index}`} className="ticker-item">
             <span className={`status-dot ${sub.status === 'safe' ? 'green' : sub.status === 'warning' ? 'yellow' : 'red'}`}></span>
             <span>{sub.shortName || sub.name}</span>
             <span className="pixel-tag">
@@ -44,8 +44,8 @@ export default function Ticker({ overallStats, targetThreshold, processedSubject
           </span>
         </div>
 
-        {subjectsList.map(sub => (
-          <div key={`dup-${sub.hash}`} className="ticker-item">
+        {subjectsList.map((sub, index) => (
+          <div key={`ticker-b-${sub.hash || index}-${index}`} className="ticker-item">
             <span className={`status-dot ${sub.status === 'safe' ? 'green' : sub.status === 'warning' ? 'yellow' : 'red'}`}></span>
             <span>{sub.shortName || sub.name}</span>
             <span className="pixel-tag">

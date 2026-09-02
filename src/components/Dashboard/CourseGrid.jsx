@@ -152,7 +152,7 @@ export default function CourseGrid({
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>Group Title:</span>
                 <input
                   type="text"
-                  placeholder="e.g. Lab Practicals, Theory Bucket"
+                  placeholder="Group Name (e.g. Core Computer Science, AI Electives)"
                   className="art-select"
                   style={{ width: '100%', marginBottom: '0.75rem' }}
                   value={newGroupName}

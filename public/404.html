@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 - Page Not Found | Newton School Attendance Tracker</title>
+    <meta name="description" content="The requested lecture record, course workbook sector, or page could not be found on Newton School Attendance Tracker." />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-primary: #fbf9f5;
+        --bg-card: #ffffff;
+        --text-primary: #1c1917;
+        --text-muted: #78716c;
+        --primary: #c85a32;
+        --primary-hover: #b44a22;
+        --border-color: #1c1917;
+        --status-green: #16a34a;
+        --radius: 12px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+      .error-card {
+        background-color: var(--bg-card);
+        border: 2px solid var(--border-color);
+        box-shadow: 4px 4px 0px var(--border-color);
+        border-radius: var(--radius);
+        max-width: 580px;
+        width: 100%;
+        padding: 2.5rem 2rem;
+        text-align: center;
+      }
+      .error-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: 1.5px solid #ef4444;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        margin-bottom: 1.25rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.15;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+      }
+      h1 span {
+        color: var(--primary);
+      }
+      p {
+        color: var(--text-muted);
+        font-size: 0.96rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+      }
+      .button-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.4rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.1s;
+      }
+      .btn-primary {
+        background-color: var(--primary);
+        color: #ffffff;
+        border: 2px solid var(--border-color);
+        box-shadow: 2px 2px 0px var(--border-color);
+      }
+      .btn-primary:hover {
+        background-color: var(--primary-hover);
+        transform: translate(-1px, -1px);
+        box-shadow: 3px 3px 0px var(--border-color);
+      }
+      .btn-secondary {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        border: 2px solid var(--border-color);
+        box-shadow: 2px 2px 0px var(--border-color);
+      }
+      .btn-secondary:hover {
+        background-color: #f5f0e6;
+        transform: translate(-1px, -1px);
+        box-shadow: 3px 3px 0px var(--border-color);
+      }
+      .breadcrumbs {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .breadcrumbs a {
+        color: var(--text-muted);
+        text-decoration: none;
+      }
+      .breadcrumbs a:hover {
+        color: var(--primary);
+        text-decoration: underline;
+      }
+      .footer-note {
+        margin-top: 2rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="error-card">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span>/</span>
+        <span>404 Error</span>
+      </nav>
+      
+      <div class="error-badge">
+        <span>ERROR 404 // ROUTE NOT FOUND</span>
+      </div>
+
+      <h1>Lecture Record <span>Not Found</span></h1>
+      
+      <p>
+        The course syllabus sector, lecture ledger entry, or URL you navigated to does not exist or has been relocated in the latest academic timetable.
+      </p>
+
+      <div class="button-group">
+        <a href="/" class="btn btn-primary">
+          <span>&larr; Return to Attendance Dashboard</span>
+        </a>
+        <a href="/#attendance-log" class="btn btn-secondary">
+          <span>View Class Attendance Ledger</span>
+        </a>
+      </div>
+
+      <div class="footer-note">
+        Newton School Attendance Tracker &bull; Zero-Trust Local Client
+      </div>
+    </div>
+  </body>
+</html>

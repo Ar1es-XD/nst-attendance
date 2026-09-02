@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, LogOut } from 'lucide-react';
+import { RefreshCw, LogOut, FileText } from 'lucide-react';
 
 export default function Navbar({
   isAuthenticated,
@@ -7,13 +7,20 @@ export default function Navbar({
   profile,
   loading,
   onRefresh,
-  onDisconnect
+  onDisconnect,
+  onOpenSources
 }) {
   return (
-    <nav className="art-nav">
+    <nav className="art-nav" aria-label="Main Navigation">
       <div className="nav-brand-group">
-        <div className="brand-icon-box">
-          NST
+        <div className="brand-icon-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img
+            src="/favicon.svg"
+            alt="Newton School of Technology Academic Emblem"
+            width={24}
+            height={24}
+            style={{ width: '24px', height: '24px' }}
+          />
         </div>
         <div className="brand-details">
           <div className="brand-title-row">
@@ -34,6 +41,16 @@ export default function Navbar({
       </div>
 
       <div className="nav-controls">
+        <button
+          className="btn-art btn-art-secondary"
+          onClick={onOpenSources}
+          title="View verified data sources & methodology"
+          style={{ fontSize: '0.8rem' }}
+        >
+          <FileText size={14} />
+          <span>Sources</span>
+        </button>
+
         {isAuthenticated && (
           <button
             className="btn-art btn-art-secondary"

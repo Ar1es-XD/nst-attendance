@@ -1,0 +1,30 @@
+# Robots.txt for Newton School Attendance Tracker & Planner
+# Canonical Host: https://nst-attendance.vercel.app
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# LLM & AI Agents specification files
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /IIms.txt
+Allow: /sitemap.xml
+
+# Explicit AI crawler directives
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://nst-attendance.vercel.app/sitemap.xml

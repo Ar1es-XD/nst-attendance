@@ -53,7 +53,7 @@ export default function ConnectView({
                 rows={4}
                 className="art-select font-mono"
                 style={{ width: '100%', resize: 'none', fontSize: '0.82rem', padding: '0.75rem', borderRadius: 'var(--radius-nested)' }}
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... or Bearer token"
+                placeholder="Paste Bearer token from Newton School LMS Authorization header..."
                 value={inputToken}
                 onChange={(e) => onInputTokenChange(e.target.value)}
               />

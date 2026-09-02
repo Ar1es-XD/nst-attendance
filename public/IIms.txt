@@ -1,0 +1,40 @@
+# Newton School Attendance Tracker & Planner
+
+> A production-grade, paper-like academic attendance dashboard, bunk capacity calculator, and what-if schedule simulator designed for Newton School of Technology (NST) undergraduate engineering students.
+
+## System Overview
+Newton School Attendance Tracker connects to the official Newton School Learning Management System (LMS) API hierarchy to extract live enrolled semesters, learning units (courses), and chronological lecture attendance ledger logs.
+
+The platform eliminates guesswork by computing exact discrete mathematical thresholds for attendance compliance, protecting students from debarment while maximizing schedule flexibility.
+
+## Mathematical Formulation & Causation Engine
+
+The system computes two discrete integer invariants for any target threshold $T \in [0.5, 1.0]$:
+
+1. **Bunkable Class Capacity ($B$)**:
+   When current attendance $A$ meets or exceeds target threshold $T$ over total lectures $N$ ($A/N \ge T$):
+   $$B = \left\lfloor \frac{A - T \cdot N}{T} \right\rfloor$$
+   This represents the exact integer number of upcoming classes the student can skip consecutively without dropping below threshold $T$.
+
+2. **Required Consecutive Recovery ($R$)**:
+   When current attendance $A$ is below target threshold $T$ ($A/N < T$):
+   $$R = \left\lceil \frac{T \cdot N - A}{1 - T} \right\rceil$$
+   This represents the exact integer number of consecutive future lectures the student must attend to elevate their cumulative attendance rate back to $\ge T$.
+
+3. **Causation Engine & Buffer Clamping**:
+   - Compares aggregate vs. course-level standing to prevent debarment in isolated subjects even when aggregate rate is safe.
+   - Evaluates next scheduled lecture against course-level buffers and generates immediate advisory flags.
+
+## Core Features
+- **Real-Time Academic Tracking**: Multi-semester hierarchy, live course health checks (Safe $\ge T$, Caution, Low Attendance).
+- **Interactive What-If Stepper Simulator**: Increment or decrement attended/missed classes per course or batch simulate full days/weeks.
+- **Verified Lecture Ledger**: Chronological log of all conducted and upcoming sessions with timestamps, lecture topics, whiteboard notes, and instructor profiles.
+- **1-Click Slack DM Generator**: Respectful, humanized correspondence generator for faculty attendance inquiries, complete with honorific toggles (Sir/Ma'am) and tone temperature slider (0.0 Formal to 1.0 Expressive).
+- **Custom Subject Buckets**: Group related courses (Labs, Theory, Electives) into aggregated buckets with custom thresholds.
+- **Zero-Trust Privacy**: Zero external backend databases. Bearer tokens and local simulations are stored strictly inside the user's browser (`localStorage`) and never transmitted to third parties.
+
+## Official Sources & Reference Links
+- [LMS Official Portal](https://my.newtonschool.co)
+- [Official Source Code Repository](https://github.com/Ar1es-XD/nst-attendance)
+- [Sitemap](https://nst-attendance.vercel.app/sitemap.xml)
+- [Detailed LLM Specification](https://nst-attendance.vercel.app/llms-full.txt)

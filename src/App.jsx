@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
 import { AlertTriangle, Check } from 'lucide-react';
 import {
   fetchUserProfile,
@@ -18,6 +18,7 @@ import {
   formatSlackTeacherMessage,
   getTemperatureLabel
 } from './utils/slackMessageFormatter.js';
+import { usePageHead } from './utils/usePageHead.js';
 import Navbar from './components/Layout/Navbar.jsx';
 import Ticker from './components/Layout/Ticker.jsx';
 import DemoBanner from './components/Layout/DemoBanner.jsx';
@@ -25,9 +26,15 @@ import SectionTabs from './components/Layout/SectionTabs.jsx';
 import Toolbar from './components/Dashboard/Toolbar.jsx';
 import MetricTiles from './components/Dashboard/MetricTiles.jsx';
 import BatchSimulator from './components/Dashboard/BatchSimulator.jsx';
-import CourseGrid from './components/Dashboard/CourseGrid.jsx';
-import AttendanceLogView from './components/AttendanceLog/AttendanceLogView.jsx';
+import Breadcrumbs from './components/Layout/Breadcrumbs.jsx';
+import Footer from './components/Layout/Footer.jsx';
 import ConnectView from './components/Modals/ConnectView.jsx';
+
+// Code-split heavy views to reduce initial JavaScript bundle
+const CourseGrid = lazy(() => import('./components/Dashboard/CourseGrid.jsx'));
+const AttendanceLogView = lazy(() => import('./components/AttendanceLog/AttendanceLogView.jsx'));
+const NotFoundView = lazy(() => import('./components/NotFound/NotFoundView.jsx'));
+const SourcesModal = lazy(() => import('./components/Modals/SourcesModal.jsx'));
 
 export default function App() {
   // Check URL query parameter for ?token=... first, then localStorage
@@ -52,6 +59,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 404 Route Detection
+  const [is404, setIs404] = useState(() => {
+    const path = window.location.pathname;
+    return path === '/404' || (path !== '/' && path !== '/index.html' && path !== '/connect');
+  });
+
+  // Sources & Citations Modal
+  const [showSourcesModal, setShowSourcesModal] = useState(() => {
+    return window.location.hash === '#sources';
+  });
+
   // Profile, Course, and Performance states
   const [profile, setProfile] = useState(null);
   const [semesters, setSemesters] = useState([]);
@@ -61,7 +79,10 @@ export default function App() {
   const [_overallPerf, setOverallPerf] = useState({ total_lectures: 0, total_lectures_attended: 0 });
 
   // High-level navigation tab: 'workbook' | 'attendance-log'
-  const [activeSectionTab, setActiveSectionTab] = useState('workbook');
+  const [activeSectionTab, setActiveSectionTab] = useState(() => {
+    if (window.location.hash === '#attendance-log') return 'attendance-log';
+    return 'workbook';
+  });
 
   // Lectures state (timeline of conducted and upcoming classes)
   const [lectures, setLectures] = useState([]);
@@ -131,9 +152,28 @@ export default function App() {
     localStorage.setItem('newton_message_temperature', messageTemperature.toString());
   }, [messageTemperature]);
 
+  // Handle browser back/forward and hash changes
+  useEffect(() => {
+    const onHashChange = () => {
+      const h = window.location.hash;
+      if (h === '#attendance-log') setActiveSectionTab('attendance-log');
+      else if (h === '#workbook') setActiveSectionTab('workbook');
+      else if (h === '#sources') setShowSourcesModal(true);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveSectionTab(tab);
+    setIs404(false);
+    window.history.replaceState(null, '', `#${tab}`);
+  };
+
   // Load Demo Mode data
   const enableDemoMode = () => {
     setIsDemoMode(true);
+    setIs404(false);
     setProfile(DEMO_PROFILE);
     setSemesters(DEMO_SEMESTERS);
     setSelectedSemesterHash('u4fvf1rm9v2e');
@@ -188,7 +228,7 @@ export default function App() {
         const semPerf = await fetchCoursePerformance(cleanToken, activeSemHash);
         setOverallPerf(semPerf);
       } catch (err) {
-        console.warn("Overall performance fetch error:", err);
+        if (import.meta.env.DEV) console.warn("Overall performance fetch error:", err);
       }
 
       // 4. Fetch Each Individual Subject's Performance Concurrently
@@ -206,7 +246,7 @@ export default function App() {
               rawTotal: pData.total_lectures ?? 0
             };
           } catch (e) {
-            console.warn(`Failed to fetch performance for ${subHash}:`, e);
+            if (import.meta.env.DEV) console.warn(`Failed to fetch performance for ${subHash}:`, e);
           }
           return {
             id: unit.id || index,
@@ -227,13 +267,13 @@ export default function App() {
         const lecs = await fetchCourseLectures(cleanToken, activeSemHash);
         setLectures(lecs);
       } catch (lecErr) {
-        console.warn("Lectures fetch warning:", lecErr);
+        if (import.meta.env.DEV) console.warn("Lectures fetch warning:", lecErr);
       } finally {
         setLecturesLoading(false);
       }
 
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error(err);
       setError(err.message || 'An error occurred while communicating with the LMS API.');
     } finally {
       setLoading(false);
@@ -285,6 +325,7 @@ export default function App() {
     }
     localStorage.setItem('newton_bearer_token', clean);
     setIsDemoMode(false);
+    setIs404(false);
     setToken(clean);
     await loadLiveDashboard(clean, selectedSemesterHash);
   };
@@ -548,6 +589,25 @@ export default function App() {
 
   const isAuthenticated = Boolean((token && profile) || isDemoMode);
 
+  // Dynamic Page Title, Meta Description & Canonical URL Management
+  usePageHead({
+    title: is404
+      ? '404 - Page Not Found'
+      : !isAuthenticated
+        ? 'Connect LMS Session'
+        : activeSectionTab === 'attendance-log'
+          ? `${semesterTitle} Class Attendance Ledger`
+          : `${semesterTitle} Course Workbook & Simulator`,
+    description: is404
+      ? 'The requested lecture record, course sector, or page could not be found.'
+      : !isAuthenticated
+        ? 'Connect your Newton School LMS session or explore the sandbox demo. Calculate bunk capacity, monitor standing, and test what-if scenarios.'
+        : activeSectionTab === 'attendance-log'
+          ? `Full chronological lecture ledger for ${semesterTitle} with faculty profiles, timestamps, topics, and 1-click Slack inquiry generator.`
+          : `Track real-time course attendance, calculate exact bunk quotas, test what-if scenarios, and manage custom course groups for ${semesterTitle}.`,
+    path: is404 ? '/404' : !isAuthenticated ? '/connect' : activeSectionTab === 'attendance-log' ? '/#attendance-log' : '/#workbook'
+  });
+
   return (
     <div className="app-container">
       {/* Auto-scrolling Ticker (Flat Art Pattern) */}
@@ -565,10 +625,26 @@ export default function App() {
         loading={loading}
         onRefresh={() => isDemoMode ? enableDemoMode() : loadLiveDashboard(token, selectedSemesterHash)}
         onDisconnect={handleDisconnect}
+        onOpenSources={() => setShowSourcesModal(true)}
       />
 
-      {/* Main View: Connect Gateway vs Authenticated Command Center */}
-      {!isAuthenticated ? (
+      {/* Main View: 404 vs Connect Gateway vs Authenticated Command Center */}
+      {is404 ? (
+        <Suspense fallback={<div className="art-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>}>
+          <NotFoundView
+            onNavigateHome={() => {
+              setIs404(false);
+              setActiveSectionTab('workbook');
+              window.history.pushState(null, '', '/');
+            }}
+            onNavigateLog={() => {
+              setIs404(false);
+              setActiveSectionTab('attendance-log');
+              window.history.pushState(null, '', '/#attendance-log');
+            }}
+          />
+        </Suspense>
+      ) : !isAuthenticated ? (
         <ConnectView
           inputToken={inputToken}
           onInputTokenChange={setInputToken}
@@ -581,6 +657,23 @@ export default function App() {
         <div>
           {/* Offline/Demo Mode Alert Banner */}
           {isDemoMode && <DemoBanner />}
+
+          {/* Breadcrumbs & Prominent Single H1 Header for Workbook */}
+          <div className="page-header-block">
+            <Breadcrumbs
+              activeTab={activeSectionTab}
+              semesterTitle={semesterTitle}
+              onTabChange={handleTabChange}
+            />
+            {activeSectionTab === 'workbook' && (
+              <>
+                <h1 className="page-main-heading">Course Attendance Workbook &amp; Simulator</h1>
+                <p className="page-subheading">
+                  Academic standing, discrete bunk quotas, and multi-course what-if simulation for {semesterTitle}.
+                </p>
+              </>
+            )}
+          </div>
 
           {/* Top Intelligence Toolbar */}
           <Toolbar
@@ -619,56 +712,72 @@ export default function App() {
           {/* Main Navigation Tabs: Course Workbook vs Class Attendance Log */}
           <SectionTabs
             activeTab={activeSectionTab}
-            onTabChange={setActiveSectionTab}
+            onTabChange={handleTabChange}
             lectureCount={lectures.length}
           />
 
-          {activeSectionTab === 'workbook' ? (
-            <CourseGrid
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              processedSubjects={processedSubjects}
-              filteredSubjects={filteredSubjects}
-              targetThreshold={targetThreshold}
-              loading={loading}
-              totalSimulations={healthStats.totalSimulations}
-              onAdjustAttendance={adjustSubjectAttendance}
-              onResetAdjustment={resetAdjustment}
-              groups={groups}
-              showCreateGroup={showCreateGroup}
-              onToggleShowCreateGroup={() => setShowCreateGroup(prev => !prev)}
-              newGroupName={newGroupName}
-              onNewGroupNameChange={setNewGroupName}
-              newGroupSubjects={newGroupSubjects}
-              onToggleGroupSubject={toggleGroupSubject}
-              onCreateGroup={handleCreateGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupThreshold={handleUpdateGroupThreshold}
-              getGroupStats={getGroupStats}
-            />
-          ) : (
-            <AttendanceLogView
-              lectureMetrics={lectureMetrics}
-              lectureSearch={lectureSearch}
-              onLectureSearchChange={setLectureSearch}
-              lectureFilterStatus={lectureFilterStatus}
-              onLectureFilterStatusChange={setLectureFilterStatus}
-              lectureFilterCourse={lectureFilterCourse}
-              onLectureFilterCourseChange={setLectureFilterCourse}
-              processedSubjects={processedSubjects}
-              teacherHonorific={teacherHonorific}
-              onTeacherHonorificChange={setTeacherHonorific}
-              messageTemperature={messageTemperature}
-              onMessageTemperatureChange={setMessageTemperature}
-              lecturesLoading={lecturesLoading}
-              filteredLectures={filteredLectures}
-              onCopyForTeacher={handleCopyForTeacher}
-            />
-          )}
+          <Suspense fallback={<div className="art-skeleton" style={{ margin: '2rem 0' }}></div>}>
+            {activeSectionTab === 'workbook' ? (
+              <CourseGrid
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                processedSubjects={processedSubjects}
+                filteredSubjects={filteredSubjects}
+                targetThreshold={targetThreshold}
+                loading={loading}
+                totalSimulations={healthStats.totalSimulations}
+                onAdjustAttendance={adjustSubjectAttendance}
+                onResetAdjustment={resetAdjustment}
+                groups={groups}
+                showCreateGroup={showCreateGroup}
+                onToggleShowCreateGroup={() => setShowCreateGroup(prev => !prev)}
+                newGroupName={newGroupName}
+                onNewGroupNameChange={setNewGroupName}
+                newGroupSubjects={newGroupSubjects}
+                onToggleGroupSubject={toggleGroupSubject}
+                onCreateGroup={handleCreateGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateGroupThreshold={handleUpdateGroupThreshold}
+                getGroupStats={getGroupStats}
+              />
+            ) : (
+              <AttendanceLogView
+                lectureMetrics={lectureMetrics}
+                lectureSearch={lectureSearch}
+                onLectureSearchChange={setLectureSearch}
+                lectureFilterStatus={lectureFilterStatus}
+                onLectureFilterStatusChange={setLectureFilterStatus}
+                lectureFilterCourse={lectureFilterCourse}
+                onLectureFilterCourseChange={setLectureFilterCourse}
+                processedSubjects={processedSubjects}
+                teacherHonorific={teacherHonorific}
+                onTeacherHonorificChange={setTeacherHonorific}
+                messageTemperature={messageTemperature}
+                onMessageTemperatureChange={setMessageTemperature}
+                lecturesLoading={lecturesLoading}
+                filteredLectures={filteredLectures}
+                onCopyForTeacher={handleCopyForTeacher}
+              />
+            )}
+          </Suspense>
         </div>
       )}
+
+      {/* Production Site Footer with Internal Links, Machine Specs & Citations */}
+      <Footer
+        onOpenSources={() => setShowSourcesModal(true)}
+        onNavigateTab={handleTabChange}
+      />
+
+      {/* Sources & Transparency Modal */}
+      <Suspense fallback={null}>
+        <SourcesModal
+          isOpen={showSourcesModal}
+          onClose={() => setShowSourcesModal(false)}
+        />
+      </Suspense>
 
       {/* Toast Notification */}
       {copiedToast && (

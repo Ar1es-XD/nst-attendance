@@ -24,7 +24,7 @@ export default function AttendanceLogView({
     <div className="attendance-log-container">
       <div className="log-header-cluster">
         <div className="log-title-area">
-          <h3>Verified Lecture Attendance Ledger</h3>
+          <h1 className="page-main-heading">Verified Lecture Attendance Ledger</h1>
           <p>
             Full chronological record of enrolled classes, timestamps, topics, and faculty for syllabus tracking and dispute references.
           </p>
@@ -212,8 +212,11 @@ export default function AttendanceLogView({
                         {lecture.instructor_user?.instructor_avatar ? (
                           <img
                             src={lecture.instructor_user.instructor_avatar}
-                            alt={instName}
-                            style={{ width: '22px', height: '22px', borderRadius: '50%' }}
+                            alt={`Profile avatar of faculty instructor ${instName}`}
+                            width={22}
+                            height={22}
+                            loading="lazy"
+                            style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
                           />
                         ) : (
                           <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>

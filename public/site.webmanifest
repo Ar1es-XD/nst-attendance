@@ -1,0 +1,31 @@
+{
+  "name": "Newton School Attendance Tracker & Planner",
+  "short_name": "NST Attendance",
+  "description": "Calculate bunk capacity with mathematical certainty. Real-time LMS telemetry, exact quotas, and what-if simulation for Newton School of Technology students.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf9f5",
+  "theme_color": "#c85a32",
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# Newton School Attendance Tracker & Planner - Comprehensive Technical Specification
+
+## 1. System Identity & Architecture
+- **Application Name**: Newton School Attendance Tracker & Planner
+- **Target Audience**: Undergraduate B.Tech Computer Science & AI students at Newton School of Technology (NST)
+- **Deployment Platform**: Vercel (Edge Network) / Static SPA
+- **Canonical Domain**: https://nst-attendance.vercel.app
+- **Custom Domain**: nstattendance.in
+- **Repository**: https://github.com/Ar1es-XD/nst-attendance
+- **Tech Stack**: React 19, Vite 8, Lucide Icons, Paper Flat-Art CSS Design System
+- **State Architecture**: Client-side single-page application with zero-trust local-first storage (`localStorage`), communicating directly with Newton School API endpoints via secure reverse-proxy.
+
+## 2. API Endpoints & Data Model
+The frontend interfaces with the Newton School backend via `/api/...`:
+- `GET /api/v1/user/me/` -> Retrieves current student profile (first_name, last_name, email, username, avatar).
+- `GET /api/v2/course/all/applied/?pagination=false&completed=false` -> Retrieves enrolled courses and active semester hierarchy.
+- `GET /api/v2/course/h/{courseHash}/self_performance/` -> Retrieves cumulative attendance metrics (`total_lectures`, `total_lectures_attended`).
+- `GET /api/v2/course/h/{courseHash}/lectures/` -> Retrieves chronological array of conducted and upcoming lecture sessions with date, time, topic, whiteboard file URL, and instructor details.
+
+## 3. Mathematical Causation Invariants
+Let $A$ be total lectures attended, $N$ be total lectures conducted, and $T$ be the required attendance target fraction ($T \in [0.5, 1.0]$):
+1. **Attendance Rate**: $P = (A / N) \times 100\%$ (where $P = 100\%$ if $N = 0$)
+2. **Bunk Quota ($B$)**: $\lfloor (A - T \cdot N) / T \rfloor$ when $A/N \ge T$, otherwise 0.
+3. **Consecutive Recovery Requirement ($R$)**: $\lceil (T \cdot N - A) / (1 - T) \rceil$ when $A/N < T$, otherwise 0.
+
+## 4. Slack Inquiry Temperature Tuning
+The integrated Slack communication generator maps temperature values $t \in [0.0, 1.0]$ to conversational styles:
+- $t \in [0.0, 0.2]$: Formal Academic Correspondence
+- $t \in [0.3, 0.4]$: Professional Direct
+- $t \in [0.5, 0.6]$: Polite Standard
+- $t \in [0.7, 0.8]$: Friendly Warm
+- $t \in [0.9, 1.0]$: Cordial Expressive
+
+## 5. Security & Privacy Model
+- Tokens are held strictly in the user's browser `localStorage`.
+- No credentials or academic metrics are ever sent to an intermediate or external database.
+- Sessions can be completely wiped at any time via the 1-click Exit button.
