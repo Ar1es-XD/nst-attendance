@@ -17,7 +17,7 @@ export default function MetricTiles({
             <span>AGGREGATE RATE</span>
           </div>
           <span className={`tag-badge ${overallStats.percent >= targetThreshold ? 'green' : 'red'}`}>
-            {overallStats.percent >= targetThreshold ? 'COMPLIANT' : 'LOW ATTENDANCE'}
+            {overallStats.percent >= targetThreshold ? 'Karlo Bunk' : 'attendance Low'}
           </span>
         </div>
         <div className="metric-number-row">
