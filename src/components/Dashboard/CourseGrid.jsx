@@ -96,7 +96,7 @@ export default function CourseGrid({
       {/* Main Content Layout Grid */}
       <div className="main-course-grid">
         {/* Left Column: Subject Cards Stream */}
-        <div>
+        <div className="courses-stream-column">
           {loading ? (
             <div className="courses-stream">
               <div className="art-skeleton"></div>
