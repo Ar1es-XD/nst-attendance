@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, RefreshCw, Calendar, ExternalLink, Check, X, Clock, Copy } from 'lucide-react';
 import { formatLectureDateTime } from '../../utils/formatters.js';
+import { getTemperatureLabel, getTemperatureTone } from '../../utils/slackMessageFormatter.js';
 
 export default function AttendanceLogView({
   lectureMetrics,
@@ -13,6 +14,8 @@ export default function AttendanceLogView({
   processedSubjects,
   teacherHonorific,
   onTeacherHonorificChange,
+  messageTemperature = 0.5,
+  onMessageTemperatureChange,
   lecturesLoading,
   filteredLectures,
   onCopyForTeacher
@@ -119,6 +122,27 @@ export default function AttendanceLogView({
             Ma'am
           </button>
         </div>
+
+        <div
+          className="message-temp-group"
+          title={`Message Temperature: ${messageTemperature.toFixed(1)} (${getTemperatureLabel(messageTemperature)} tone)\nAdjusts phrasing from Formal (0.0) to Expressive (1.0)`}
+        >
+          <span className="temp-label">Temp:</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={messageTemperature}
+            onChange={(e) => onMessageTemperatureChange?.(parseFloat(e.target.value))}
+            className="art-range-input temp-range-input"
+            aria-label="Message Temperature"
+          />
+          <span className="temp-value-display">{messageTemperature.toFixed(1)}</span>
+          <span className={`temp-tone-chip tone-${getTemperatureTone(messageTemperature)}`}>
+            {getTemperatureLabel(messageTemperature)}
+          </span>
+        </div>
       </div>
 
       {/* Lecture List Table */}
@@ -221,7 +245,7 @@ export default function AttendanceLogView({
                       <button
                         className="btn-copy-teacher"
                         onClick={() => onCopyForTeacher(lecture)}
-                        title="Copy formatted Slack DM message for professor"
+                        title={`Copy Slack DM (${getTemperatureLabel(messageTemperature)} tone · Temp ${messageTemperature.toFixed(1)})`}
                       >
                         <Copy size={12} />
                         <span>Copy Slack DM</span>

@@ -25,6 +25,7 @@ A modern, paper-like attendance dashboard and schedule planner designed for Newt
 - **Search & Filter**: Filter by missed classes, attended classes, specific subjects, or search lecture topics.
 - **1-Click Slack DM Generator**: Copy respectful, human direct messages formatted specifically for Slack to quickly resolve attendance discrepancies with instructors.
 - **Dynamic Salutations**: Easily toggle between `Sir` and `Ma'am` addressing styles.
+- **Message Temperature Slider**: Tune phrasing tone from crisp formal academic correspondence (0.0) to warm, appreciative direct messages (1.0) with local preference persistence.
 
 ### ⚡ Interactive What-If Simulator
 - **Course Steppers**: Click `+` or `-` on any course to test future attendance projections.

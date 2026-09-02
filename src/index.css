@@ -1489,6 +1489,73 @@ kbd {
   color: #fff;
 }
 
+.message-temp-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background-color: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.65rem 0.2rem 0.45rem;
+}
+
+.temp-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-left: 0.25rem;
+}
+
+.temp-range-input {
+  width: 72px;
+}
+
+.temp-value-display {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 22px;
+  text-align: center;
+}
+
+.temp-tone-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: all var(--transition-fast);
+}
+
+.temp-tone-chip.tone-formal {
+  background-color: hsl(210, 40%, 92%);
+  color: hsl(210, 60%, 35%);
+}
+
+.temp-tone-chip.tone-concise {
+  background-color: hsl(180, 40%, 92%);
+  color: hsl(180, 60%, 30%);
+}
+
+.temp-tone-chip.tone-balanced {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.temp-tone-chip.tone-warm {
+  background-color: hsl(35, 90%, 92%);
+  color: hsl(25, 85%, 35%);
+}
+
+.temp-tone-chip.tone-expressive {
+  background-color: hsl(14, 85%, 92%);
+  color: hsl(10, 80%, 40%);
+}
+
 .log-table-wrap {
   overflow-x: auto;
   border: 2px solid var(--border-color);

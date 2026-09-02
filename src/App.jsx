@@ -14,7 +14,10 @@ import {
   calculateSubjectMetrics,
   verifyActionCausation
 } from './utils/causationEngine.js';
-import { formatSlackTeacherMessage } from './utils/slackMessageFormatter.js';
+import {
+  formatSlackTeacherMessage,
+  getTemperatureLabel
+} from './utils/slackMessageFormatter.js';
 import Navbar from './components/Layout/Navbar.jsx';
 import Ticker from './components/Layout/Ticker.jsx';
 import DemoBanner from './components/Layout/DemoBanner.jsx';
@@ -68,6 +71,11 @@ export default function App() {
   const [lectureSearch, setLectureSearch] = useState('');
   const [copiedToast, setCopiedToast] = useState('');
   const [teacherHonorific, setTeacherHonorific] = useState('Sir');
+  const [messageTemperature, setMessageTemperature] = useState(() => {
+    const saved = localStorage.getItem('newton_message_temperature');
+    const parsed = saved !== null ? parseFloat(saved) : 0.5;
+    return isNaN(parsed) ? 0.5 : Math.min(Math.max(parsed, 0), 1);
+  });
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,6 +125,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('newton_target_threshold', targetThreshold.toString());
   }, [targetThreshold]);
+
+  // Save message temperature to localStorage
+  useEffect(() => {
+    localStorage.setItem('newton_message_temperature', messageTemperature.toString());
+  }, [messageTemperature]);
 
   // Load Demo Mode data
   const enableDemoMode = () => {
@@ -370,12 +383,14 @@ export default function App() {
       lecture,
       studentProfile: profile,
       honorific: teacherHonorific,
+      temperature: messageTemperature,
       isDemoMode
     });
 
     navigator.clipboard.writeText(slackMsg).then(() => {
       const recipientName = firstName ? `${firstName} ${teacherHonorific.toLowerCase()}` : teacherHonorific;
-      setCopiedToast(`Copied Slack message for ${recipientName}!`);
+      const toneLabel = getTemperatureLabel(messageTemperature);
+      setCopiedToast(`Copied Slack message (${toneLabel} · ${messageTemperature.toFixed(1)}) for ${recipientName}!`);
       setTimeout(() => setCopiedToast(''), 3000);
     }).catch(() => {
       alert("Could not access clipboard. Please copy manually:\n\n" + slackMsg);
@@ -645,6 +660,8 @@ export default function App() {
               processedSubjects={processedSubjects}
               teacherHonorific={teacherHonorific}
               onTeacherHonorificChange={setTeacherHonorific}
+              messageTemperature={messageTemperature}
+              onMessageTemperatureChange={setMessageTemperature}
               lecturesLoading={lecturesLoading}
               filteredLectures={filteredLectures}
               onCopyForTeacher={handleCopyForTeacher}
