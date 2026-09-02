@@ -21,7 +21,7 @@ export default function Navbar({
             {isAuthenticated && (
               <span className={`tag-badge ${isDemoMode ? 'orange' : 'terracotta'}`}>
                 <span className={`status-dot ${isDemoMode ? 'yellow' : 'green'}`}></span>
-                {isDemoMode ? 'Sandbox Demo' : 'Live LMS Sync'}
+                {isDemoMode ? 'Sandbox Demo' : 'Application Live'}
               </span>
             )}
           </div>
